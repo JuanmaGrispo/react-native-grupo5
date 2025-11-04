@@ -1,33 +1,64 @@
-// src/components/Home/HomeScreen.js
 import React, { useEffect, useState } from "react";
-import { View, Text, FlatList, StyleSheet, ActivityIndicator } from "react-native";
+import { View, Text, FlatList, StyleSheet, ActivityIndicator, Alert } from "react-native";
+import * as Notifications from "expo-notifications";
+import { Camera } from "expo-camera";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { getClasses } from "../../services/apiService";
+
+const PERMISSIONS_KEY = "permissions_requested";
 
 export default function HomeScreen() {
   const [classes, setClasses] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [loadingClasses, setLoadingClasses] = useState(true);
+  const [loadingPermissions, setLoadingPermissions] = useState(true);
   const [error, setError] = useState(null);
 
+  // Cargar clases
   useEffect(() => {
     const fetchClasses = async () => {
       try {
         const data = await getClasses();
-        setClasses(data);
+        setClasses(data || []); // Asegurarse que sea array
       } catch (err) {
+        console.error(err);
         setError("Error al cargar las clases.");
       } finally {
-        setLoading(false);
+        setLoadingClasses(false);
       }
     };
 
     fetchClasses();
   }, []);
 
-  if (loading) {
+
+  useEffect(() => {
+    const requestPermissions = async () => {
+      const alreadyRequested = await AsyncStorage.getItem(PERMISSIONS_KEY);
+      if (!alreadyRequested) {
+        const notif = await Notifications.requestPermissionsAsync();
+        const cam = await Camera.requestCameraPermissionsAsync();
+
+        if (notif.status !== "granted" || cam.status !== "granted") {
+          Alert.alert(
+            "Permisos requeridos",
+            "Para usar todas las funciones, habilitá cámara y notificaciones."
+          );
+        }
+
+        await AsyncStorage.setItem(PERMISSIONS_KEY, "true");
+      }
+      setLoadingPermissions(false);
+    };
+
+    requestPermissions();
+  }, []);
+
+  // Si todavía estamos cargando clases o permisos
+  if (loadingClasses || loadingPermissions) {
     return (
       <View style={styles.center}>
         <ActivityIndicator size="large" color="#007AFF" />
-        <Text>Cargando clases...</Text>
+        <Text>Cargando...</Text>
       </View>
     );
   }
@@ -55,45 +86,20 @@ export default function HomeScreen() {
     <View style={styles.container}>
       <FlatList
         data={classes}
-        keyExtractor={(item) => item.id}
+        keyExtractor={(item) => item.id.toString()}
         renderItem={renderItem}
         contentContainerStyle={{ paddingBottom: 20 }}
+        ListEmptyComponent={<Text style={{ textAlign: "center" }}>No hay clases disponibles</Text>}
       />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#F7F7F7",
-    padding: 16,
-  },
-  card: {
-    backgroundColor: "#fff",
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 12,
-    shadowColor: "#000",
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  title: {
-    fontSize: 18,
-    fontWeight: "600",
-    marginBottom: 4,
-  },
-  text: {
-    fontSize: 14,
-    color: "#333",
-  },
-  center: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  error: {
-    color: "red",
-  },
+  container: { flex: 1, backgroundColor: "#F7F7F7", padding: 16 },
+  card: { backgroundColor: "#fff", borderRadius: 12, padding: 16, marginBottom: 12, shadowColor: "#000", shadowOpacity: 0.1, shadowRadius: 4, elevation: 3 },
+  title: { fontSize: 18, fontWeight: "600", marginBottom: 4 },
+  text: { fontSize: 14, color: "#333" },
+  center: { flex: 1, justifyContent: "center", alignItems: "center" },
+  error: { color: "red" },
 });
