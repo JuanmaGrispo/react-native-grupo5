@@ -1,18 +1,42 @@
-// src/components/Home/HomeScreen.js
 import React, { useEffect, useState } from "react";
-import { View, Text, FlatList, StyleSheet, ActivityIndicator } from "react-native";
+import { View, Text, ActivityIndicator, FlatList, StyleSheet } from "react-native";
 import { getClasses } from "../../services/apiService";
+import {Picker} from "@react-native-picker/picker"
+
+// Token provisional para probar (después se obtiene del login)
+const token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2NGVmZjJmNS1hYjljLTQ4ZjMtODdjZi0yZWZmZTQyZDgwMWEiLCJlbWFpbCI6ImJhbHRhLm1hcmVuZGFAZ21haWwuY29tIiwiaWF0IjoxNzYxODQ3NzA3LCJleHAiOjE3NjI0NTI1MDd9.1MATBwddZHuGwQ888nay0jiBOpjBERfgbf5X4ZokXvQ";
 
 export default function HomeScreen() {
   const [classes, setClasses] = useState([]);
+  const [filteredClasses, setFilteredClasses] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+
+  // Filtros
+  const [sede, setSede] = useState("");
+  const [disciplina, setDisciplina] = useState("");
+  const [fecha, setFecha] = useState("");
+
+  // Opciones únicas
+  const [sedes, setSedes] = useState([]);
+  const [disciplinas, setDisciplinas] = useState([]);
+  const [fechas, setFechas] = useState([]);
 
   useEffect(() => {
     const fetchClasses = async () => {
       try {
-        const data = await getClasses();
+        const data = await getClasses(token);
         setClasses(data);
+        setFilteredClasses(data);
+
+        // Generar opciones únicas para los dropdowns
+        const sedesUnicas = [...new Set(data.map((c) => c.locationName).filter(Boolean))];
+        const disciplinasUnicas = [...new Set(data.map((c) => c.discipline).filter(Boolean))];
+        const fechasUnicas = [...new Set(data.map((c) => c.createdAt.split("T")[0]))];
+
+        setSedes(sedesUnicas);
+        setDisciplinas(disciplinasUnicas);
+        setFechas(fechasUnicas);
       } catch (err) {
         setError("Error al cargar las clases.");
       } finally {
@@ -22,6 +46,17 @@ export default function HomeScreen() {
 
     fetchClasses();
   }, []);
+
+  // Filtrado dinámico
+  useEffect(() => {
+    let filtered = classes;
+
+    if (sede) filtered = filtered.filter((c) => c.locationName === sede);
+    if (disciplina) filtered = filtered.filter((c) => c.discipline === disciplina);
+    if (fecha) filtered = filtered.filter((c) => c.createdAt.startsWith(fecha));
+
+    setFilteredClasses(filtered);
+  }, [sede, disciplina, fecha, classes]);
 
   if (loading) {
     return (
@@ -53,8 +88,43 @@ export default function HomeScreen() {
 
   return (
     <View style={styles.container}>
+      <Text style={styles.header}>Filtrar Clases</Text>
+
+      {/* Filtro Sede */}
+      <Text style={styles.label}>Sede</Text>
+      <View style={styles.pickerContainer}>
+        <Picker selectedValue={sede} onValueChange={(value) => setSede(value)}>
+          <Picker.Item label="Todas" value="" />
+          {sedes.map((s, i) => (
+            <Picker.Item key={i} label={s} value={s} />
+          ))}
+        </Picker>
+      </View>
+
+      {/* Filtro Disciplina */}
+      <Text style={styles.label}>Disciplina</Text>
+      <View style={styles.pickerContainer}>
+        <Picker selectedValue={disciplina} onValueChange={(value) => setDisciplina(value)}>
+          <Picker.Item label="Todas" value="" />
+          {disciplinas.map((d, i) => (
+            <Picker.Item key={i} label={d} value={d} />
+          ))}
+        </Picker>
+      </View>
+
+      {/* Filtro Fecha */}
+      <Text style={styles.label}>Fecha</Text>
+      <View style={styles.pickerContainer}>
+        <Picker selectedValue={fecha} onValueChange={(value) => setFecha(value)}>
+          <Picker.Item label="Todas" value="" />
+          {fechas.map((f, i) => (
+            <Picker.Item key={i} label={f} value={f} />
+          ))}
+        </Picker>
+      </View>
+
       <FlatList
-        data={classes}
+        data={filteredClasses}
         keyExtractor={(item) => item.id}
         renderItem={renderItem}
         contentContainerStyle={{ paddingBottom: 20 }}
@@ -68,6 +138,22 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: "#F7F7F7",
     padding: 16,
+  },
+  header: {
+    fontSize: 20,
+    fontWeight: "700",
+    marginBottom: 12,
+  },
+  label: {
+    fontWeight: "600",
+    marginTop: 10,
+  },
+  pickerContainer: {
+    borderWidth: 1,
+    borderColor: "#ccc",
+    borderRadius: 8,
+    marginBottom: 10,
+    backgroundColor: "#fff",
   },
   card: {
     backgroundColor: "#fff",

@@ -1,19 +1,28 @@
-// src/services/apiService.js
 import axios from "axios";
 
-const API_BASE_URL = "http://localhost:3000/api/v1"; // Cambiar si usás emulador Android o dispositivo físico
+//Web
+const API_BASE_URL = "http://localhost:3000/api/v1"; 
+
+//Android porque sino no anda
+//const API_BASE_URL = "http://10.0.2.2:3000/api/v1";
+
 
 const api = axios.create({
   baseURL: API_BASE_URL,
   timeout: 5000,
 });
 
-export const getClasses = async () => {
+// Función para obtener clases con Bearer Token
+export const getClasses = async (token) => {
   try {
-    const response = await api.get("/classes");
+    const response = await api.get("/classes", {
+      headers: {
+        Authorization: `Bearer ${token}`,  // <--- Aca va el token
+      },
+    });
     return response.data;
   } catch (error) {
-    console.error("Error fetching classes:", error);
+    console.error("Error fetching classes:", error.response?.status, error.response?.data);
     throw error;
   }
 };
