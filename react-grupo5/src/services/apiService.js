@@ -1,4 +1,6 @@
 import axios from "axios";
+import { getToken } from "../utils/tokenStorage"; 
+//const API_BASE_URL = "http://localhost:3000/api/v1"; // Cambiar si usás emulador Android o dispositivo físico
 
 //Web
 const API_BASE_URL = "http://localhost:3000/api/v1"; 
