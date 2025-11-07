@@ -4,18 +4,20 @@ import * as Notifications from "expo-notifications";
 import { Camera } from "expo-camera";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { getClasses } from "../../services/apiService";
-import {Picker} from "@react-native-picker/picker"
+import { Picker } from "@react-native-picker/picker";
 
 // Token provisional para probar (después se obtiene del login)
-const token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2NGVmZjJmNS1hYjljLTQ4ZjMtODdjZi0yZWZmZTQyZDgwMWEiLCJlbWFpbCI6ImJhbHRhLm1hcmVuZGFAZ21haWwuY29tIiwiaWF0IjoxNzYxODQ3NzA3LCJleHAiOjE3NjI0NTI1MDd9.1MATBwddZHuGwQ888nay0jiBOpjBERfgbf5X4ZokXvQ";
+const token =
+  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2NGVmZjJmNS1hYjljLTQ4ZjMtODdjZi0yZWZmZTQyZDgwMWEiLCJlbWFpbCI6ImJhbHRhLm1hcmVuZGFAZ21haWwuY29tIiwiaWF0IjoxNzYxODQ3NzA3LCJleHAiOjE3NjI0NTI1MDd9.1MATBwddZHuGwQ888nay0jiBOpjBERfgbf5X4ZokXvQ";
 
 const PERMISSIONS_KEY = "permissions_requested";
 
 export default function HomeScreen() {
   const [classes, setClasses] = useState([]);
   const [filteredClasses, setFilteredClasses] = useState([]);
-  const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [loadingClasses, setLoadingClasses] = useState(true);
+  const [loadingPermissions, setLoadingPermissions] = useState(true);
 
   // Filtros
   const [sede, setSede] = useState("");
@@ -27,6 +29,7 @@ export default function HomeScreen() {
   const [disciplinas, setDisciplinas] = useState([]);
   const [fechas, setFechas] = useState([]);
 
+  // Cargar clases desde la API
   useEffect(() => {
     const fetchClasses = async () => {
       try {
@@ -53,7 +56,7 @@ export default function HomeScreen() {
     fetchClasses();
   }, []);
 
-
+  // Pedir permisos (notificaciones + cámara)
   useEffect(() => {
     const requestPermissions = async () => {
       const alreadyRequested = await AsyncStorage.getItem(PERMISSIONS_KEY);
@@ -76,8 +79,6 @@ export default function HomeScreen() {
     requestPermissions();
   }, []);
 
-  // Si todavía estamos cargando clases o permisos
-  if (loadingClasses || loadingPermissions) {
   // Filtrado dinámico
   useEffect(() => {
     let filtered = classes;
@@ -89,7 +90,8 @@ export default function HomeScreen() {
     setFilteredClasses(filtered);
   }, [sede, disciplina, fecha, classes]);
 
-  if (loading) {
+  // ⏳ Mostrar loader mientras se cargan datos o permisos
+  if (loadingClasses || loadingPermissions) {
     return (
       <View style={styles.center}>
         <ActivityIndicator size="large" color="#007AFF" />
@@ -98,6 +100,7 @@ export default function HomeScreen() {
     );
   }
 
+  // ❌ Mostrar error si hubo un problema
   if (error) {
     return (
       <View style={styles.center}>
@@ -106,6 +109,7 @@ export default function HomeScreen() {
     );
   }
 
+  // ✅ Mostrar lista una vez cargado todo
   const renderItem = ({ item }) => (
     <View style={styles.card}>
       <Text style={styles.title}>{item.title}</Text>
@@ -154,6 +158,7 @@ export default function HomeScreen() {
         </Picker>
       </View>
 
+      {/* Lista de clases */}
       <FlatList
         data={filteredClasses}
         keyExtractor={(item) => item.id.toString()}
@@ -161,7 +166,6 @@ export default function HomeScreen() {
         contentContainerStyle={{ paddingBottom: 20 }}
         ListEmptyComponent={<Text style={{ textAlign: "center" }}>No hay clases disponibles</Text>}
       />
-
     </View>
   );
 }
@@ -216,4 +220,3 @@ const styles = StyleSheet.create({
     color: "red",
   },
 });
-}

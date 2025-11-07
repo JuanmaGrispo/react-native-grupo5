@@ -32,7 +32,7 @@ const MailScreen = ({ navigation }) => {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Acceso por código</Text>
+      <Text style={styles.title}>Ingrese su mail</Text>
 
       <TextInput
         style={styles.input}
