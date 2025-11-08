@@ -3,19 +3,18 @@ import { View, Text, FlatList, StyleSheet, ActivityIndicator, Alert } from "reac
 import * as Notifications from "expo-notifications";
 import { Camera } from "expo-camera";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { getToken } from "../../utils/tokenStorage"; // 👈 IMPORTANTE
 import { getClasses } from "../../services/apiService";
-import {Picker} from "@react-native-picker/picker"
-
-// Token provisional para probar (después se obtiene del login)
-const token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2NGVmZjJmNS1hYjljLTQ4ZjMtODdjZi0yZWZmZTQyZDgwMWEiLCJlbWFpbCI6ImJhbHRhLm1hcmVuZGFAZ21haWwuY29tIiwiaWF0IjoxNzYxODQ3NzA3LCJleHAiOjE3NjI0NTI1MDd9.1MATBwddZHuGwQ888nay0jiBOpjBERfgbf5X4ZokXvQ";
+import { Picker } from "@react-native-picker/picker";
 
 const PERMISSIONS_KEY = "permissions_requested";
 
 export default function HomeScreen() {
   const [classes, setClasses] = useState([]);
   const [filteredClasses, setFilteredClasses] = useState([]);
-  const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [loadingClasses, setLoadingClasses] = useState(true);
+  const [loadingPermissions, setLoadingPermissions] = useState(true);
 
   // Filtros
   const [sede, setSede] = useState("");
@@ -27,9 +26,18 @@ export default function HomeScreen() {
   const [disciplinas, setDisciplinas] = useState([]);
   const [fechas, setFechas] = useState([]);
 
+  //  Obtener token real y cargar clases
   useEffect(() => {
     const fetchClasses = async () => {
       try {
+        const token = await getToken(); // Token  desde AsyncStorage
+
+        if (!token) {
+          setError("No se encontró el token. Iniciá sesión nuevamente.");
+          setLoadingClasses(false);
+          return;
+        }
+
         const data = await getClasses(token);
         setClasses(data);
         setFilteredClasses(data);
@@ -43,7 +51,7 @@ export default function HomeScreen() {
         setDisciplinas(disciplinasUnicas);
         setFechas(fechasUnicas);
       } catch (err) {
-        console.error(err);
+        console.error("Error al cargar clases:", err);
         setError("Error al cargar las clases.");
       } finally {
         setLoadingClasses(false);
@@ -53,7 +61,7 @@ export default function HomeScreen() {
     fetchClasses();
   }, []);
 
-
+  // Pedir permisos (notificaciones + cámara)
   useEffect(() => {
     const requestPermissions = async () => {
       const alreadyRequested = await AsyncStorage.getItem(PERMISSIONS_KEY);
@@ -76,8 +84,6 @@ export default function HomeScreen() {
     requestPermissions();
   }, []);
 
-  // Si todavía estamos cargando clases o permisos
-  if (loadingClasses || loadingPermissions) {
   // Filtrado dinámico
   useEffect(() => {
     let filtered = classes;
@@ -89,7 +95,8 @@ export default function HomeScreen() {
     setFilteredClasses(filtered);
   }, [sede, disciplina, fecha, classes]);
 
-  if (loading) {
+  // ⏳ Loader
+  if (loadingClasses || loadingPermissions) {
     return (
       <View style={styles.center}>
         <ActivityIndicator size="large" color="#007AFF" />
@@ -98,6 +105,7 @@ export default function HomeScreen() {
     );
   }
 
+  // ❌ Error
   if (error) {
     return (
       <View style={styles.center}>
@@ -106,6 +114,7 @@ export default function HomeScreen() {
     );
   }
 
+  // ✅ Lista
   const renderItem = ({ item }) => (
     <View style={styles.card}>
       <Text style={styles.title}>{item.title}</Text>
@@ -121,7 +130,6 @@ export default function HomeScreen() {
     <View style={styles.container}>
       <Text style={styles.header}>Filtrar Clases</Text>
 
-      {/* Filtro Sede */}
       <Text style={styles.label}>Sede</Text>
       <View style={styles.pickerContainer}>
         <Picker selectedValue={sede} onValueChange={(value) => setSede(value)}>
@@ -132,7 +140,6 @@ export default function HomeScreen() {
         </Picker>
       </View>
 
-      {/* Filtro Disciplina */}
       <Text style={styles.label}>Disciplina</Text>
       <View style={styles.pickerContainer}>
         <Picker selectedValue={disciplina} onValueChange={(value) => setDisciplina(value)}>
@@ -143,7 +150,6 @@ export default function HomeScreen() {
         </Picker>
       </View>
 
-      {/* Filtro Fecha */}
       <Text style={styles.label}>Fecha</Text>
       <View style={styles.pickerContainer}>
         <Picker selectedValue={fecha} onValueChange={(value) => setFecha(value)}>
@@ -161,7 +167,6 @@ export default function HomeScreen() {
         contentContainerStyle={{ paddingBottom: 20 }}
         ListEmptyComponent={<Text style={{ textAlign: "center" }}>No hay clases disponibles</Text>}
       />
-
     </View>
   );
 }
