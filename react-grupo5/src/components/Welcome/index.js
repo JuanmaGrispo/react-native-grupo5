@@ -19,7 +19,6 @@ const WelcomeScreen = ({ navigation }) => {
         return;
       }
 
-
       const hasHardware = await LocalAuthentication.hasHardwareAsync();
       const enrolled = await LocalAuthentication.isEnrolledAsync();
 
@@ -56,30 +55,78 @@ const WelcomeScreen = ({ navigation }) => {
   if (showWelcome) {
     return (
       <View style={styles.container}>
-        <Text style={styles.title}>¡Bienvenido!</Text>
-        <Text style={styles.subtitle}>
-          Gracias por instalar la app. Presiona “Entrar” para comenzar.
-        </Text>
+        {}
+        <View style={styles.header}>
+          <Text style={styles.gymName}>RitmoFit</Text>
+        </View>
 
-        <TouchableOpacity
-          style={styles.button}
-          onPress={() => navigation.navigate("Login")}
-        >
-          <Text style={styles.buttonText}>Entrar</Text>
-        </TouchableOpacity>
+        {}
+        <View style={styles.content}>
+          <Text style={styles.welcomeText}>Bienvenido/a</Text>
+
+          <Text style={styles.description}>
+            Estas por ingresar a RitmoFit, donde te convertiremos en tu mejor versión.
+          </Text>
+
+          <TouchableOpacity
+            style={styles.button}
+            onPress={() => navigation.navigate("Login")}
+          >
+            <Text style={styles.buttonText}>Entrar</Text>
+          </TouchableOpacity>
+        </View>
       </View>
     );
   }
 
-  return null; // mientras decide navegación, no renderizar nada
+  return null;
 };
 
 const styles = StyleSheet.create({
-  container: { flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: "#f5f5f5", padding: 16 },
-  title: { fontSize: 26, fontWeight: "bold", marginBottom: 16 },
-  subtitle: { fontSize: 16, color: "#666", textAlign: "center", marginBottom: 30 },
-  button: { backgroundColor: "#007AFF", padding: 12, borderRadius: 8, width: "70%", alignItems: "center" },
-  buttonText: { color: "#fff", fontSize: 18, fontWeight: "bold" },
+  container: { 
+    flex: 1,
+    backgroundColor: "#f5f5f5",
+    padding: 16
+  },
+  header: {
+    alignItems: "center",
+    marginTop: 100, 
+  },
+  gymName: { 
+    fontSize: 35, 
+    fontWeight: "bold", 
+    color: "#000",
+  },
+  content: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  welcomeText: { 
+    fontSize: 21, 
+    fontWeight: "600", 
+    color: "#333", 
+    marginBottom: 10 
+  },
+  description: { 
+    fontSize: 16, 
+    color: "#666", 
+    textAlign: "center", 
+    marginBottom: 30, 
+    paddingHorizontal: 20 
+  },
+  button: { 
+    backgroundColor: "#007AFF", 
+    padding: 12, 
+    borderRadius: 8, 
+    width: "70%", 
+    alignItems: "center" 
+  },
+  buttonText: { 
+    color: "#fff", 
+    fontSize: 18, 
+    fontWeight: "bold" 
+  },
 });
 
 export default WelcomeScreen;

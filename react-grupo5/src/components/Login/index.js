@@ -54,7 +54,7 @@ const LoginScreen = ({ navigation }) => {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Iniciar Sesión</Text>
+      <Text style={styles.title}>Te hemos extrañado</Text>
 
       <TextInput
         style={styles.input}
@@ -113,3 +113,6 @@ const styles = StyleSheet.create({
   linkText: { color: "#000", fontSize: 16, marginTop: 5 },
   errorText: { color: "red", marginBottom: 10, fontSize: 14 },
 });
+
+
+
