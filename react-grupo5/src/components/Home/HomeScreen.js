@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import { View, Text, FlatList, StyleSheet, ActivityIndicator } from "react-native";
 import { View, Text, FlatList, StyleSheet, ActivityIndicator, Alert } from "react-native";
 import * as Notifications from "expo-notifications";
 import { Camera } from "expo-camera";
@@ -7,10 +8,10 @@ import { getToken } from "../../utils/tokenStorage"; // 👈 IMPORTANTE
 import { getClasses } from "../../services/apiService";
 import { Picker } from "@react-native-picker/picker";
 
-const PERMISSIONS_KEY = "permissions_requested";
-
 export default function HomeScreen() {
   const [classes, setClasses] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [filteredClasses, setFilteredClasses] = useState([]);
   const [error, setError] = useState(null);
   const [loadingClasses, setLoadingClasses] = useState(true);
@@ -54,7 +55,7 @@ export default function HomeScreen() {
         console.error("Error al cargar clases:", err);
         setError("Error al cargar las clases.");
       } finally {
-        setLoadingClasses(false);
+        setLoading(false);
       }
     };
 
@@ -100,7 +101,7 @@ export default function HomeScreen() {
     return (
       <View style={styles.center}>
         <ActivityIndicator size="large" color="#007AFF" />
-        <Text>Cargando...</Text>
+        <Text>Cargando clases...</Text>
       </View>
     );
   }
