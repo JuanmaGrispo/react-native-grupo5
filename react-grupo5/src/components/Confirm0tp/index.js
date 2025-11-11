@@ -3,6 +3,7 @@ import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert } from "reac
 import { AuthContext } from "../../context/AuthContext";
 import { saveToken } from "../../utils/tokenStorage";
 import { verifyOtpLogin, startOtpLogin } from "../../services/authService";
+import { CommonActions } from "@react-navigation/native"
 
 const ConfirmOtpScreen = ({ navigation, route }) => {
   const { login } = useContext(AuthContext);
@@ -53,6 +54,12 @@ if (response && response.accessToken) {
   setStatus("success");
   await saveToken(response.accessToken);
   await login(response.accessToken);
+  navigation.dispatch(
+  CommonActions.reset({
+    index: 0,
+    routes: [{ name: "HomeScreen" }],
+  })
+);
 } else {
         setStatus("error");
         setErrorMsg("Código incorrecto");
