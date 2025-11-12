@@ -57,7 +57,7 @@ if (response && response.accessToken) {
   navigation.dispatch(
   CommonActions.reset({
     index: 0,
-    routes: [{ name: "Profile" }],
+    routes: [{ name: "Home" }],
   })
 );
 } else {
