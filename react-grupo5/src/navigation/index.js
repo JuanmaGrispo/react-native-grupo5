@@ -6,6 +6,7 @@ import LoginScreen from "../components/Login";
 import MailScreen from "../components/Mail";
 import ConfirmOtpScreen from "../components/Confirm0tp"; 
 import WelcomeScreen from "../components/Welcome";
+import ProfileScreen from "../components/profile/profile";
 import { AuthContext } from "../context/AuthContext";
 import { View, ActivityIndicator } from "react-native";
 
@@ -26,8 +27,9 @@ export default function RootStack() {
     <Stack.Navigator screenOptions={{ headerShown: false }}>
       {isAuthenticated ? (
         <>
-          <Stack.Screen name="HomeScreen" component={HomeScreen} />
+          <Stack.Screen name="Home" component={HomeScreen} />
           <Stack.Screen name="Detail" component={DetailScreen} />
+          <Stack.Screen name="Profile" component={ProfileScreen} />
         </>
       ) : (
         <>
@@ -35,6 +37,7 @@ export default function RootStack() {
           <Stack.Screen name="Login" component={LoginScreen} />
           <Stack.Screen name="Mail" component={MailScreen} />
           <Stack.Screen name="ConfirmOtp" component={ConfirmOtpScreen} />
+          <Stack.Screen name="Profile" component={ProfileScreen} />
         </>
       )}
     </Stack.Navigator>

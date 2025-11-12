@@ -1,24 +1,56 @@
 // src/services/userService.js
 import api from "./apiService";
+import { getToken } from "../utils/tokenStorage";
 
-// 🔹 Obtener el perfil del usuario actual
+/**
+ * Obtiene el usuario actual (requiere Bearer token).
+ * Endpoint esperado: GET /users/me
+ */
 export const getCurrentUser = async () => {
   try {
-    const response = await api.get("/users/me");
+    const token = await getToken();
+    if (!token) throw new Error("NO_TOKEN");
+
+    const response = await api.get("/user/me", {
+      headers: { Authorization: `Bearer ${token}` },
+    });
     return response.data; // { id, name, email, ... }
   } catch (error) {
-    console.error("Error fetching current user:", error.response?.status, error.response?.data);
+    console.error(
+      "Error fetching current user:",
+      error?.response?.status,
+      error?.response?.data
+    );
     throw error;
   }
 };
 
-// 🔹 Actualizar el nombre del usuario
+/**
+ * Actualiza el nombre del usuario actual (requiere Bearer token).
+ * Endpoint esperado: PUT /users/me  body: { name }
+ */
 export const updateCurrentUserName = async (name) => {
   try {
-    const response = await api.put("/users/me", { name });
+    const token = await getToken();
+    if (!token) throw new Error("NO_TOKEN");
+
+    const response = await api.put(
+      "/user/me",
+      { name },
+      { headers: { Authorization: `Bearer ${token}` } }
+    );
     return response.data;
   } catch (error) {
-    console.error("Error updating user name:", error.response?.status, error.response?.data);
+    console.error(
+      "Error updating user name:",
+      error?.response?.status,
+      error?.response?.data
+    );
     throw error;
   }
+};
+
+export default {
+  getCurrentUser,
+  updateCurrentUserName,
 };
