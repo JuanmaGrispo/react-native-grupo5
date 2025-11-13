@@ -9,7 +9,9 @@ import { getToken } from "../utils/tokenStorage";
 //const API_BASE_URL = "http://localhost:3000/api/v1"; 
 
 //Android porque sino no anda
-const API_BASE_URL = "http://192.168.0.26:3000/api/v1";
+const API_BASE_URL = "http://10.0.2.2:3000/api/v1";
+
+
 
 
 const api = axios.create({
