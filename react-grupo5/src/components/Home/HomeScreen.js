@@ -3,7 +3,7 @@ import { View, Text, FlatList, StyleSheet, ActivityIndicator, Alert } from "reac
 import * as Notifications from "expo-notifications";
 import { Camera } from "expo-camera";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { getToken } from "../../utils/tokenStorage"; // 👈 IMPORTANTE
+import { getToken } from "../../utils/tokenStorage"; // IMPORTANTE
 import { getClasses } from "../../services/apiService";
 import { Picker } from "@react-native-picker/picker";
 
@@ -60,6 +60,7 @@ export default function HomeScreen() {
     fetchClasses();
   }, []);
 
+
   // Filtrado dinámico
   useEffect(() => {
     let filtered = classes;
@@ -72,7 +73,7 @@ export default function HomeScreen() {
   }, [sede, disciplina, fecha, classes]);
 
   // ⏳ Loader
-  if (loadingClasses || loadingPermissions) {
+  if (loading) {
     return (
       <View style={styles.center}>
         <ActivityIndicator size="large" color="#007AFF" />
@@ -147,53 +148,75 @@ export default function HomeScreen() {
   );
 }
 
+const COLORS = {
+  black: "#000000",
+  white: "#FFFFFF",
+  yellow: "#FFD800",
+  gray: "#3A3A3A",
+  darkerGray: "#222222",
+  red: "#FF3B30",
+};
+
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#F7F7F7",
-    padding: 16,
+    backgroundColor: COLORS.black,
+    paddingHorizontal: 24,
+    paddingTop: 49,
+    paddingBottom: 24,
   },
   header: {
-    fontSize: 20,
+    color: COLORS.yellow,
+    fontSize: 42,
+    textAlign: "center",
     fontWeight: "700",
-    marginBottom: 12,
+    marginBottom: 24,
   },
   label: {
+    color: COLORS.white,
+    fontSize: 16,
     fontWeight: "600",
     marginTop: 10,
+    marginBottom: 4,
   },
   pickerContainer: {
     borderWidth: 1,
-    borderColor: "#ccc",
+    borderColor: COLORS.gray,
     borderRadius: 8,
     marginBottom: 10,
-    backgroundColor: "#fff",
+    backgroundColor: COLORS.darkerGray,
+    overflow: "hidden",
   },
   card: {
-    backgroundColor: "#fff",
+    backgroundColor: COLORS.darkerGray,
     borderRadius: 12,
     padding: 16,
-    marginBottom: 12,
-    shadowColor: "#000",
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: "#333",
   },
   title: {
+    color: COLORS.white,
     fontSize: 18,
     fontWeight: "600",
-    marginBottom: 4,
+    marginBottom: 8,
   },
   text: {
+    color: COLORS.white,
     fontSize: 14,
-    color: "#333",
+    marginBottom: 4,
+    opacity: 0.9,
   },
   center: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
+    backgroundColor: COLORS.black,
   },
   error: {
-    color: "red",
+    color: COLORS.red,
+    fontSize: 16,
+    textAlign: "center",
   },
 });
+
