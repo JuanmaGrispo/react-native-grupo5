@@ -57,7 +57,7 @@ if (response && response.accessToken) {
   navigation.dispatch(
   CommonActions.reset({
     index: 0,
-    routes: [{ name: "Home" }],
+    routes: [{ name: "MainTabs" }],
   })
 );
 } else {
