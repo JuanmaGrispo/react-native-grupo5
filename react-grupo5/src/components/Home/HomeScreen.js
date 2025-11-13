@@ -60,29 +60,6 @@ export default function HomeScreen() {
     fetchClasses();
   }, []);
 
-  // Pedir permisos (notificaciones + cámara)
-  useEffect(() => {
-    const requestPermissions = async () => {
-      const alreadyRequested = await AsyncStorage.getItem(PERMISSIONS_KEY);
-      if (!alreadyRequested) {
-        const notif = await Notifications.requestPermissionsAsync();
-        const cam = await Camera.requestCameraPermissionsAsync();
-
-        if (notif.status !== "granted" || cam.status !== "granted") {
-          Alert.alert(
-            "Permisos requeridos",
-            "Para usar todas las funciones, habilitá cámara y notificaciones."
-          );
-        }
-
-        await AsyncStorage.setItem(PERMISSIONS_KEY, "true");
-      }
-      setLoadingPermissions(false);
-    };
-
-    requestPermissions();
-  }, []);
-
   // Filtrado dinámico
   useEffect(() => {
     let filtered = classes;

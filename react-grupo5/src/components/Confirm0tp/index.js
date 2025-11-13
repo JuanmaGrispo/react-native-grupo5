@@ -3,13 +3,14 @@ import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert } from "reac
 import { AuthContext } from "../../context/AuthContext";
 import { saveToken } from "../../utils/tokenStorage";
 import { verifyOtpLogin, startOtpLogin } from "../../services/authService";
-import { CommonActions } from "@react-navigation/native"
+import { CommonActions } from "@react-navigation/native";
+import { colors } from "../../theme";
 
 const ConfirmOtpScreen = ({ navigation, route }) => {
   const { login } = useContext(AuthContext);
   const email = route.params?.email;
-  const [otp, setOtp] = useState(["", "", "", "", "", ""]); 
-  const [status, setStatus] = useState(null); 
+  const [otp, setOtp] = useState(["", "", "", "", "", ""]);
+  const [status, setStatus] = useState(null);
   const [errorMsg, setErrorMsg] = useState("");
   const inputs = useRef([]);
 
@@ -22,7 +23,7 @@ const ConfirmOtpScreen = ({ navigation, route }) => {
       if (index < 5) inputs.current[index + 1].focus();
 
       if (newOtp.every((d) => d !== "")) {
-const codeToSend = newOtp.join("");
+        const codeToSend = newOtp.join("");
         await verifyOtp(codeToSend);
       } else {
         setStatus(null);
@@ -45,22 +46,21 @@ const codeToSend = newOtp.join("");
 
   const verifyOtp = async (code) => {
     if (!email) return;
-
     try {
-const sanitizedCode = code.replace(/\s/g, ''); 
-const response = await verifyOtpLogin(email, sanitizedCode);
+      const sanitizedCode = code.replace(/\s/g, "");
+      const response = await verifyOtpLogin(email, sanitizedCode);
 
-if (response && response.accessToken) {
-  setStatus("success");
-  await saveToken(response.accessToken);
-  await login(response.accessToken);
-  navigation.dispatch(
-  CommonActions.reset({
-    index: 0,
-    routes: [{ name: "MainTabs" }],
-  })
-);
-} else {
+      if (response && response.accessToken) {
+        setStatus("success");
+        await saveToken(response.accessToken);
+        await login(response.accessToken);
+        navigation.dispatch(
+          CommonActions.reset({
+            index: 0,
+            routes: [{ name: "MainTabs" }],
+          })
+        );
+      } else {
         setStatus("error");
         setErrorMsg("Código incorrecto");
       }
@@ -78,9 +78,8 @@ if (response && response.accessToken) {
       setStatus(null);
       setErrorMsg("");
       inputs.current[0].focus();
-      Alert.alert("Código enviado", "Se envió un nuevo código a tu correo.");
+      Alert.alert("Código reenviado", "Se envió un nuevo código a tu correo.");
     } catch (error) {
-      console.error(error);
       Alert.alert("Error", "No se pudo reenviar el código.");
     }
   };
@@ -88,7 +87,10 @@ if (response && response.accessToken) {
   return (
     <View style={styles.container}>
       <Text style={styles.title}>Confirmar Código</Text>
-      <Text style={styles.subtitle}>Ingresá el código de 6 dígitos que te enviamos a {email}</Text>
+      <Text style={styles.subtitle}>
+        Ingresá el código de 6 dígitos enviado a{"\n"}
+        <Text style={{ color: colors.text }}>{email}</Text>
+      </Text>
 
       <View style={styles.otpContainer}>
         {otp.map((digit, index) => (
@@ -119,48 +121,59 @@ if (response && response.accessToken) {
   );
 };
 
+export default ConfirmOtpScreen;
+
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: colors.background,
     justifyContent: "center",
-    alignItems: "center",
-    backgroundColor: "#f5f5f5",
-    paddingHorizontal: 20,
+    alignItems: "flex-start", // 👈 Mueve los inputs hacia la izquierda
+    paddingHorizontal: 40, // margen lateral
   },
-  title: { fontSize: 22, marginBottom: 8, fontWeight: "bold" },
-  subtitle: { fontSize: 14, color: "#555", textAlign: "center", marginBottom: 20 },
-otpContainer: {
-  flexDirection: "row",
-  justifyContent: "space-between",
-  width: "80%",
-  marginBottom: 10,
-  marginLeft: -25, 
-},
-otpInput: {
-  width: 45,
-  height: 50,
-  backgroundColor: "#fff",
-  borderWidth: 1,
-  borderColor: "#ccc",
-  borderRadius: 8,
-  textAlign: "center",
-  fontSize: 20,
-  marginHorizontal: 2, 
-},
-
-
+  title: {
+    fontSize: 26,
+    color: colors.text,
+    marginBottom: 10,
+    fontWeight: "bold",
+    alignSelf: "center",
+    width: "100%",
+    textAlign: "center",
+  },
+  subtitle: {
+    fontSize: 15,
+    color: colors.subtitle,
+    textAlign: "center",
+    marginBottom: 30,
+    alignSelf: "center",
+    width: "100%",
+  },
+  otpContainer: {
+    flexDirection: "row",
+    justifyContent: "flex-start", 
+    gap: 10, 
+    marginLeft: -3,
+    marginBottom: 30,
+  },
+  otpInput: {
+    width: 42,
+    height: 50,
+    backgroundColor: colors.inputBackground,
+    borderWidth: 1,
+    borderColor: colors.inputBorder,
+    borderRadius: 8,
+    textAlign: "center",
+    fontSize: 22,
+    color: "#fff",
+  },
   errorText: {
     color: "red",
-    fontSize: 12,
-    marginBottom: 10,
-  },
-  resendButton: {
-    paddingVertical: 10,
-  },
-  resendText: {
     fontSize: 14,
-    color: "#000", 
+    marginBottom: 10,
+    alignSelf: "center",
+    width: "100%",
+    textAlign: "center",
   },
+  resendButton: { paddingVertical: 10, alignSelf: "center" },
+  resendText: { fontSize: 15, color: colors.subtitle },
 });
-
-export default ConfirmOtpScreen;
