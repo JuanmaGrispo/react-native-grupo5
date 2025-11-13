@@ -87,9 +87,6 @@ export default function ProfileScreen() {
         <TouchableOpacity style={[styles.button, styles.buttonYellow]} onPress={fetchUser}>
           <Text style={styles.buttonTextBlack}>Reintentar</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={[styles.button, styles.buttonGray]} onPress={() => navigation.goBack()}>
-          <Text style={styles.buttonTextWhite}>Volver</Text>
-        </TouchableOpacity>
       </View>
     );
   }
@@ -156,15 +153,6 @@ export default function ProfileScreen() {
           </View>
         </View>
       )}
-
-      {/* Botón Volver */}
-      <TouchableOpacity
-        accessible accessibilityLabel="Volver"
-        style={[styles.button, styles.buttonGray, { marginTop: 8 }]}
-        onPress={() => navigation.goBack()}
-      >
-        <Text style={styles.buttonTextWhite}>Volver</Text>
-      </TouchableOpacity>
     </ScrollView>
   );
 }

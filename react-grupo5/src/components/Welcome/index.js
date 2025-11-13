@@ -29,7 +29,7 @@ const WelcomeScreen = ({ navigation }) => {
 
         if (result.success) {
           await login(token); 
-          navigation.replace("Home");
+          navigation.replace("MainTabs");
         } else {
           navigation.replace("Login"); 
         }
