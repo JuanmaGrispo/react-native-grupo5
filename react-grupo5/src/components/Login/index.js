@@ -4,6 +4,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { AuthContext } from "../../context/AuthContext";
 import { saveToken } from "../../utils/tokenStorage";
 import api from "../../services/apiService";
+import { colors } from "../../theme";
 
 const LoginScreen = ({ navigation }) => {
   const { login } = useContext(AuthContext);
@@ -16,37 +17,19 @@ const LoginScreen = ({ navigation }) => {
   const handleLogin = async () => {
     setErrorMsg("");
 
-    if (!email.includes("@")) {
-      setErrorMsg("Ingrese un email válido.");
-      return;
-    }
-    if (!password) {
-      setErrorMsg("Ingrese su contraseña.");
-      return;
-    }
+    if (!email.includes("@")) return setErrorMsg("Ingrese un email válido.");
+    if (!password) return setErrorMsg("Ingrese su contraseña.");
 
     try {
       setLoading(true);
-      const response = await api.post("/auth/login", {
-        email,
-        password,
-        mode: "password"
-      });
-
-      if (response.data && response.data.accessToken) {
+      const response = await api.post("/auth/login", { email, password, mode: "password" });
+      if (response.data?.accessToken) {
         const token = response.data.accessToken;
         await saveToken(token);
         await login(token);
-      } else {
-        setErrorMsg("Credenciales incorrectas.");
-      }
+      } else setErrorMsg("Credenciales incorrectas.");
     } catch (error) {
-      console.error("Error login:", error.response?.data || error.message);
-      if (error.response?.status === 401) {
-        setErrorMsg("Credenciales incorrectas.");
-      } else {
-        setErrorMsg("Error al iniciar sesión. Intente nuevamente.");
-      }
+      setErrorMsg("Error al iniciar sesión. Intente nuevamente.");
     } finally {
       setLoading(false);
     }
@@ -59,6 +42,7 @@ const LoginScreen = ({ navigation }) => {
       <TextInput
         style={styles.input}
         placeholder="Email"
+        placeholderTextColor="#888"
         value={email}
         keyboardType="email-address"
         autoCapitalize="none"
@@ -69,12 +53,13 @@ const LoginScreen = ({ navigation }) => {
         <TextInput
           style={styles.passwordInput}
           placeholder="Contraseña"
+          placeholderTextColor="#888"
           value={password}
           secureTextEntry={!showPassword}
           onChangeText={setPassword}
         />
         <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
-          <Ionicons name={showPassword ? "eye-off" : "eye"} size={24} color="#555" />
+          <Ionicons name={showPassword ? "eye-off" : "eye"} size={24} color="#aaa" />
         </TouchableOpacity>
       </View>
 
@@ -94,25 +79,45 @@ const LoginScreen = ({ navigation }) => {
 export default LoginScreen;
 
 const styles = StyleSheet.create({
-  container: { flex: 1, justifyContent: "center", alignItems: "center", paddingHorizontal: 20 },
-  title: { fontSize: 24, marginBottom: 20 },
-  input: { borderWidth: 1, padding: 10, width: "100%", marginBottom: 15, borderColor: "#ccc", borderRadius: 8 },
+  container: {
+    flex: 1,
+    backgroundColor: colors.background,
+    justifyContent: "center",
+    alignItems: "center",
+    paddingHorizontal: 20,
+  },
+  title: { fontSize: 26, color: colors.text, marginBottom: 20, fontWeight: "bold" },
+  input: {
+    backgroundColor: colors.inputBackground,
+    color: "#fff",
+    padding: 12,
+    width: "100%",
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: colors.inputBorder,
+    marginBottom: 15,
+  },
   passwordContainer: {
     flexDirection: "row",
     alignItems: "center",
+    backgroundColor: colors.inputBackground,
     borderWidth: 1,
-    borderColor: "#ccc",
+    borderColor: colors.inputBorder,
     borderRadius: 8,
     width: "100%",
     paddingHorizontal: 10,
     marginBottom: 15,
   },
-  passwordInput: { flex: 1, paddingVertical: 10 },
-  button: { backgroundColor: "#007AFF", padding: 10, borderRadius: 8, width: "100%", alignItems: "center", marginBottom: 12 },
-  buttonText: { color: "#fff", fontWeight: "bold" },
-  linkText: { color: "#000", fontSize: 16, marginTop: 5 },
-  errorText: { color: "red", marginBottom: 10, fontSize: 14 },
+  passwordInput: { flex: 1, color: "#fff", paddingVertical: 10 },
+  button: {
+    backgroundColor: colors.buttonBackground,
+    padding: 12,
+    borderRadius: 8,
+    width: "100%",
+    alignItems: "center",
+    marginBottom: 12,
+  },
+  buttonText: { color: colors.buttonText, fontWeight: "bold", fontSize: 16 },
+  linkText: { color: colors.subtitle, fontSize: 15 },
+  errorText: { color: "red", marginBottom: 10 },
 });
-
-
-
