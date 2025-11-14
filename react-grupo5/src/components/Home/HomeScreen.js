@@ -1,11 +1,23 @@
 import React, { useEffect, useState } from "react";
-import { View, Text, FlatList, StyleSheet, ActivityIndicator, Alert } from "react-native";
+import {
+  View,
+  Text,
+  FlatList,
+  StyleSheet,
+  ActivityIndicator,
+  Alert,
+  TouchableOpacity,
+  Platform,
+  ActionSheetIOS,
+} from "react-native";
 import * as Notifications from "expo-notifications";
 import { Camera } from "expo-camera";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { getToken } from "../../utils/tokenStorage"; // IMPORTANTE
 import { getClasses } from "../../services/apiService";
+import { createReservation } from "../../services/reservationService";
 import { Picker } from "@react-native-picker/picker";
+import { Ionicons } from "@expo/vector-icons";
 
 export default function HomeScreen() {
   const [classes, setClasses] = useState([]);
@@ -14,6 +26,7 @@ export default function HomeScreen() {
   const [error, setError] = useState(null);
   const [loadingClasses, setLoadingClasses] = useState(true);
   const [loadingPermissions, setLoadingPermissions] = useState(true);
+  const [reservationLoadingId, setReservationLoadingId] = useState(null);
 
   // Filtros
   const [sede, setSede] = useState("");
@@ -91,51 +104,143 @@ export default function HomeScreen() {
     );
   }
 
+  const showIOSPicker = (title, options, currentValue, onSelect) => {
+    const items = ["Todas", ...options];
+    ActionSheetIOS.showActionSheetWithOptions(
+      {
+        title,
+        message: "Seleccioná una opción",
+        options: [...items, "Cancelar"],
+        cancelButtonIndex: items.length,
+        userInterfaceStyle: "dark",
+      },
+      (index) => {
+        if (index === items.length) return;
+        const selected = items[index];
+        onSelect(selected === "Todas" ? "" : selected);
+      }
+    );
+  };
+
+  const renderFilter = (label, value, options, onChange) => {
+    const displayValue = value || "Todas";
+
+    if (Platform.OS === "ios") {
+      return (
+        <View key={label} style={styles.filterGroup}>
+          <Text style={styles.label}>{label}</Text>
+          <TouchableOpacity
+            style={styles.pickerButton}
+            onPress={() => showIOSPicker(label, options, value, onChange)}
+            activeOpacity={0.7}
+          >
+            <Text style={styles.pickerButtonText}>{displayValue}</Text>
+            <Ionicons name="chevron-down" size={16} color={COLORS.white} />
+          </TouchableOpacity>
+        </View>
+      );
+    }
+
+    return (
+      <View key={label} style={styles.filterGroup}>
+        <Text style={styles.label}>{label}</Text>
+        <View style={styles.pickerContainer}>
+          <Picker
+            selectedValue={value}
+            onValueChange={(selectedValue) => onChange(selectedValue)}
+            dropdownIconColor={COLORS.white}
+            style={styles.picker}
+          >
+            <Picker.Item label="Todas" value="" />
+            {options.map((option) => (
+              <Picker.Item key={option} label={option} value={option} />
+            ))}
+          </Picker>
+        </View>
+      </View>
+    );
+  };
+
   // ✅ Lista
-  const renderItem = ({ item }) => (
-    <View style={styles.card}>
-      <Text style={styles.title}>{item.title}</Text>
-      <Text style={styles.text}>Disciplina: {item.discipline}</Text>
-      <Text style={styles.text}>Duración: {item.defaultDurationMin} min</Text>
-      <Text style={styles.text}>Cupos: {item.defaultCapacity}</Text>
-      <Text style={styles.text}>Profesor: {item.instructorName ?? "Sin asignar"}</Text>
-      <Text style={styles.text}>Ubicación: {item.locationName ?? "No especificada"}</Text>
-    </View>
-  );
+  const handleReserve = async (session) => {
+    const sessionId = session?.id ?? session?.sessionId ?? session?.session?.id;
+
+    if (!sessionId) {
+      Alert.alert("Error", "Esta clase no tiene un identificador de sesión válido.");
+      return;
+    }
+
+    try {
+      setReservationLoadingId(sessionId);
+      await createReservation(sessionId);
+      Alert.alert("Reserva creada", "Tu reserva se registró correctamente.");
+    } catch (error) {
+      const status = error?.response?.status;
+      const backendMessage = error?.response?.data?.message;
+
+      let message = backendMessage || "No se pudo crear la reserva. Intentá nuevamente.";
+
+      if (status === 401 || status === 403) {
+        message = "Tu sesión expiró. Iniciá sesión otra vez para reservar.";
+      } else if (status === 404) {
+        message = "La clase ya no está disponible.";
+      } else if (status === 409) {
+        message = "Ya tenés una reserva para esta clase.";
+      }
+
+      Alert.alert("Error al reservar", message);
+    } finally {
+      setReservationLoadingId(null);
+    }
+  };
+
+  const formatDate = (isoDate) => {
+    if (!isoDate) return "Fecha no disponible";
+    try {
+      const date = new Date(isoDate);
+      return date.toLocaleDateString("es-AR", {
+        day: "2-digit",
+        month: "2-digit",
+        year: "numeric",
+      });
+    } catch (error) {
+      return "Fecha no disponible";
+    }
+  };
+
+  const renderItem = ({ item }) => {
+    const sessionId = item?.id ?? item?.sessionId ?? item?.session?.id;
+    const reserving = reservationLoadingId === sessionId;
+    const formattedDate = formatDate(item?.createdAt);
+
+    return (
+      <View style={styles.card}>
+        <Text style={styles.title}>{item.title}</Text>
+        <Text style={styles.dateText}>Fecha: {formattedDate}</Text>
+        <Text style={styles.text}>Disciplina: {item.discipline}</Text>
+        <Text style={styles.text}>Duración: {item.defaultDurationMin} min</Text>
+        <Text style={styles.text}>Cupos: {item.defaultCapacity}</Text>
+        <Text style={styles.text}>Profesor: {item.instructorName ?? "Sin asignar"}</Text>
+        <Text style={styles.text}>Ubicación: {item.locationName ?? "No especificada"}</Text>
+        <TouchableOpacity
+          style={[styles.reserveButton, reserving && styles.reserveButtonDisabled]}
+          onPress={() => handleReserve(item)}
+          disabled={reserving}
+          activeOpacity={0.7}
+        >
+          <Text style={styles.reserveButtonText}>{reserving ? "Reservando..." : "Reservar"}</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  };
 
   return (
     <View style={styles.container}>
       <Text style={styles.header}>Filtrar Clases</Text>
 
-      <Text style={styles.label}>Sede</Text>
-      <View style={styles.pickerContainer}>
-        <Picker selectedValue={sede} onValueChange={(value) => setSede(value)}>
-          <Picker.Item label="Todas" value="" />
-          {sedes.map((s, i) => (
-            <Picker.Item key={i} label={s} value={s} />
-          ))}
-        </Picker>
-      </View>
-
-      <Text style={styles.label}>Disciplina</Text>
-      <View style={styles.pickerContainer}>
-        <Picker selectedValue={disciplina} onValueChange={(value) => setDisciplina(value)}>
-          <Picker.Item label="Todas" value="" />
-          {disciplinas.map((d, i) => (
-            <Picker.Item key={i} label={d} value={d} />
-          ))}
-        </Picker>
-      </View>
-
-      <Text style={styles.label}>Fecha</Text>
-      <View style={styles.pickerContainer}>
-        <Picker selectedValue={fecha} onValueChange={(value) => setFecha(value)}>
-          <Picker.Item label="Todas" value="" />
-          {fechas.map((f, i) => (
-            <Picker.Item key={i} label={f} value={f} />
-          ))}
-        </Picker>
-      </View>
+      {renderFilter("Sede", sede, sedes, setSede)}
+      {renderFilter("Disciplina", disciplina, disciplinas, setDisciplina)}
+      {renderFilter("Fecha", fecha, fechas, setFecha)}
 
       <FlatList
         data={filteredClasses}
@@ -179,6 +284,9 @@ const styles = StyleSheet.create({
     marginTop: 10,
     marginBottom: 4,
   },
+  filterGroup: {
+    marginBottom: 12,
+  },
   pickerContainer: {
     borderWidth: 1,
     borderColor: COLORS.gray,
@@ -186,6 +294,27 @@ const styles = StyleSheet.create({
     marginBottom: 10,
     backgroundColor: COLORS.darkerGray,
     overflow: "hidden",
+  },
+  picker: {
+    color: COLORS.white,
+    height: 44,
+  },
+  pickerButton: {
+    borderWidth: 1,
+    borderColor: COLORS.gray,
+    borderRadius: 8,
+    backgroundColor: COLORS.darkerGray,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    marginBottom: 4,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  pickerButtonText: {
+    color: COLORS.white,
+    fontSize: 16,
+    fontWeight: "500",
   },
   card: {
     backgroundColor: COLORS.darkerGray,
@@ -195,11 +324,32 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#333",
   },
+  reserveButton: {
+    marginTop: 12,
+    backgroundColor: COLORS.yellow,
+    borderRadius: 8,
+    paddingVertical: 10,
+    alignItems: "center",
+  },
+  reserveButtonDisabled: {
+    opacity: 0.6,
+  },
+  reserveButtonText: {
+    color: COLORS.black,
+    fontSize: 16,
+    fontWeight: "600",
+  },
   title: {
     color: COLORS.white,
     fontSize: 18,
     fontWeight: "600",
     marginBottom: 8,
+  },
+  dateText: {
+    color: COLORS.white,
+    fontSize: 14,
+    fontWeight: "700",
+    marginBottom: 6,
   },
   text: {
     color: COLORS.white,
