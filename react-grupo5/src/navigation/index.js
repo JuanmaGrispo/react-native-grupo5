@@ -10,6 +10,7 @@ import ConfirmOtpScreen from "../components/Confirm0tp";
 import WelcomeScreen from "../components/Welcome";
 import ProfileScreen from "../components/profile/profile";
 import ReservationsScreen from "../components/reservations/ReservationsScreen";
+import HistorialScreen from "../components/Historial/HistorialScreen";
 import { AuthContext } from "../context/AuthContext";
 import { View, ActivityIndicator } from "react-native";
 
@@ -29,6 +30,8 @@ function MainTabs() {
             iconName = focused ? "home" : "home-outline";
           } else if (route.name === "Reservations") {
             iconName = focused ? "calendar" : "calendar-outline";
+          } else if (route.name === "Historial") {
+            iconName = focused ? "time" : "time-outline";
           } else if (route.name === "Profile") {
             iconName = focused ? "person" : "person-outline";
           }
@@ -60,6 +63,11 @@ function MainTabs() {
         name="Reservations" 
         component={ReservationsScreen}
         options={{ tabBarLabel: "Reservas" }}
+      />
+      <Tab.Screen 
+        name="Historial" 
+        component={HistorialScreen}
+        options={{ tabBarLabel: "Historial" }}
       />
       <Tab.Screen 
         name="Profile" 
