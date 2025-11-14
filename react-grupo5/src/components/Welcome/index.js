@@ -46,8 +46,8 @@ const WelcomeScreen = ({ navigation }) => {
   if (checkingBiometrics) {
     return (
       <View style={styles.container}>
-        <ActivityIndicator size="large" color="#007AFF" />
-        <Text style={{ marginTop: 16 }}>Verificando identidad...</Text>
+        <ActivityIndicator size="large" color="#FFD700" />
+        <Text style={styles.loadingText}>Verificando identidad...</Text>
       </View>
     );
   }
@@ -55,12 +55,10 @@ const WelcomeScreen = ({ navigation }) => {
   if (showWelcome) {
     return (
       <View style={styles.container}>
-        {}
         <View style={styles.header}>
           <Text style={styles.gymName}>RitmoFit</Text>
         </View>
 
-        {}
         <View style={styles.content}>
           <Text style={styles.welcomeText}>Bienvenido/a</Text>
 
@@ -85,17 +83,17 @@ const WelcomeScreen = ({ navigation }) => {
 const styles = StyleSheet.create({
   container: { 
     flex: 1,
-    backgroundColor: "#f5f5f5",
+    backgroundColor: "#000",
     padding: 16
   },
   header: {
     alignItems: "center",
-    marginTop: 100, 
+    marginTop: 100,
   },
   gymName: { 
-    fontSize: 35, 
+    fontSize: 40, 
     fontWeight: "bold", 
-    color: "#000",
+    color: "#FFD700",
   },
   content: {
     flex: 1,
@@ -103,30 +101,34 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   welcomeText: { 
-    fontSize: 21, 
-    fontWeight: "600", 
-    color: "#333", 
-    marginBottom: 10 
+    fontSize: 26, 
+    fontWeight: "bold",
+    color: "#FFD700", 
+    marginBottom: 12 
   },
   description: { 
     fontSize: 16, 
-    color: "#666", 
-    textAlign: "center", 
-    marginBottom: 30, 
+    color: "#CCCCCC", 
+    textAlign: "center",
+    marginBottom: 30,
     paddingHorizontal: 20 
   },
-  button: { 
-    backgroundColor: "#007AFF", 
-    padding: 12, 
-    borderRadius: 8, 
-    width: "70%", 
-    alignItems: "center" 
-  },
-  buttonText: { 
-    color: "#fff", 
-    fontSize: 18, 
-    fontWeight: "bold" 
-  },
+button: { 
+  backgroundColor: "#FFD700", 
+  padding: 14,
+  borderRadius: 10,
+  width: "70%",
+  alignItems: "center"
+},
+buttonText: { 
+  color: "#000",  
+  fontSize: 18,
+  fontWeight: "bold" 
+},
+  loadingText: {
+    marginTop: 16,
+    color: "#CCCCCC"
+  }
 });
 
 export default WelcomeScreen;

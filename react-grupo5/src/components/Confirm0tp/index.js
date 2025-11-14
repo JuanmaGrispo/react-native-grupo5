@@ -1,3 +1,5 @@
+
+
 import React, { useRef, useState, useContext } from "react";
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert } from "react-native";
 import { AuthContext } from "../../context/AuthContext";
@@ -22,7 +24,7 @@ const ConfirmOtpScreen = ({ navigation, route }) => {
       if (index < 5) inputs.current[index + 1].focus();
 
       if (newOtp.every((d) => d !== "")) {
-const codeToSend = newOtp.join("");
+        const codeToSend = newOtp.join("");
         await verifyOtp(codeToSend);
       } else {
         setStatus(null);
@@ -47,25 +49,24 @@ const codeToSend = newOtp.join("");
     if (!email) return;
 
     try {
-const sanitizedCode = code.replace(/\s/g, ''); 
-const response = await verifyOtpLogin(email, sanitizedCode);
+      const sanitizedCode = code.replace(/\s/g, ''); 
+      const response = await verifyOtpLogin(email, sanitizedCode);
 
-if (response && response.accessToken) {
-  setStatus("success");
-  await saveToken(response.accessToken);
-  await login(response.accessToken);
-  navigation.dispatch(
-  CommonActions.reset({
-    index: 0,
-    routes: [{ name: "MainTabs" }],
-  })
-);
-} else {
+      if (response && response.accessToken) {
+        setStatus("success");
+        await saveToken(response.accessToken);
+        await login(response.accessToken);
+        navigation.dispatch(
+          CommonActions.reset({
+            index: 0,
+            routes: [{ name: "MainTabs" }],
+          })
+        );
+      } else {
         setStatus("error");
         setErrorMsg("Código incorrecto");
       }
     } catch (error) {
-      console.error("Error al verificar OTP:", error);
       setStatus("error");
       setErrorMsg("Código incorrecto");
     }
@@ -80,7 +81,6 @@ if (response && response.accessToken) {
       inputs.current[0].focus();
       Alert.alert("Código enviado", "Se envió un nuevo código a tu correo.");
     } catch (error) {
-      console.error(error);
       Alert.alert("Error", "No se pudo reenviar el código.");
     }
   };
@@ -88,7 +88,7 @@ if (response && response.accessToken) {
   return (
     <View style={styles.container}>
       <Text style={styles.title}>Confirmar Código</Text>
-      <Text style={styles.subtitle}>Ingresá el código de 6 dígitos que te enviamos a {email}</Text>
+      <Text style={styles.subtitle}>Ingresá el código enviado a {email}</Text>
 
       <View style={styles.otpContainer}>
         {otp.map((digit, index) => (
@@ -124,31 +124,40 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: "#f5f5f5",
+    backgroundColor: "#000",
     paddingHorizontal: 20,
   },
-  title: { fontSize: 22, marginBottom: 8, fontWeight: "bold" },
-  subtitle: { fontSize: 14, color: "#555", textAlign: "center", marginBottom: 20 },
-otpContainer: {
-  flexDirection: "row",
-  justifyContent: "space-between",
-  width: "80%",
-  marginBottom: 10,
-  marginLeft: -25, 
-},
-otpInput: {
-  width: 45,
-  height: 50,
-  backgroundColor: "#fff",
-  borderWidth: 1,
-  borderColor: "#ccc",
-  borderRadius: 8,
-  textAlign: "center",
-  fontSize: 20,
-  marginHorizontal: 2, 
-},
-
-
+  title: { 
+    fontSize: 22, 
+    marginBottom: 8, 
+    fontWeight: "bold",
+    color: "#FFD700"
+  },
+  subtitle: { 
+    fontSize: 14, 
+    color: "#B3B3B3",
+    textAlign: "center", 
+    marginBottom: 20 
+  },
+  otpContainer: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    width: "80%",
+    gap: 10,
+    marginBottom: 10,
+    marginLeft: -60, 
+  },
+  otpInput: {
+    width: 45,
+    height: 50,
+    backgroundColor: "#1A1A1A",
+    borderWidth: 1,
+    borderColor: "#555",
+    borderRadius: 8,
+    textAlign: "center",
+    color: "#FFD700",
+    fontSize: 20,
+  },
   errorText: {
     color: "red",
     fontSize: 12,
@@ -159,7 +168,7 @@ otpInput: {
   },
   resendText: {
     fontSize: 14,
-    color: "#000", 
+    color: "#FFD700",
   },
 });
 
