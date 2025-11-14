@@ -1,11 +1,6 @@
-// src/services/reservationService.js
 import api from "./apiService";
 import { getToken } from "../utils/tokenStorage";
 
-/**
- * Obtiene todas las reservas del usuario actual (requiere Bearer token).
- * Endpoint: GET /reservations/me
- */
 export const getReservations = async () => {
   try {
     const token = await getToken();
@@ -14,7 +9,7 @@ export const getReservations = async () => {
     const response = await api.get("/reservations/me", {
       headers: { Authorization: `Bearer ${token}` },
     });
-    return response.data; // Array de reservas
+    return response.data;
   } catch (error) {
     console.error(
       "Error fetching reservations:",
@@ -25,18 +20,18 @@ export const getReservations = async () => {
   }
 };
 
-/**
- * Cancela una reserva por sessionId (requiere Bearer token).
- * Endpoint: PATCH /reservations/:sessionId/cancel
- */
 export const cancelReservation = async (sessionId) => {
   try {
     const token = await getToken();
     if (!token) throw new Error("NO_TOKEN");
 
-    const response = await api.patch(`/reservations/${sessionId}/cancel`, {}, {
-      headers: { Authorization: `Bearer ${token}` },
-    });
+    const response = await api.patch(
+      `/reservations/${sessionId}/cancel`,
+      {},
+      {
+        headers: { Authorization: `Bearer ${token}` },
+      }
+    );
     return response.data;
   } catch (error) {
     console.error(
@@ -48,11 +43,6 @@ export const cancelReservation = async (sessionId) => {
   }
 };
 
-/**
- * Crea una nueva reserva (requiere Bearer token).
- * Endpoint: POST /reservations
- * Body: { sessionId: string }
- */
 export const createReservation = async (sessionId) => {
   try {
     const token = await getToken();
