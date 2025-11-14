@@ -18,65 +18,61 @@ import { getAllClasses, getAllSessions } from "../../services/apiService";
 import { createReservation } from "../../services/reservationService";
 
 export default function HomeScreen() {
-  const [sessions, setSessions] = useState([]);
-  const [classes, setClasses] = useState([]);
-
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+
+  const [sessions, setSessions] = useState([]);
+  const [filteredSessions, setFilteredSessions] = useState([]);
 
   // Filtros
   const [sede, setSede] = useState("");
   const [disciplina, setDisciplina] = useState("");
   const [fecha, setFecha] = useState("");
 
+  // Valores dinámicos del filtro
   const [sedes, setSedes] = useState([]);
   const [disciplinas, setDisciplinas] = useState([]);
   const [fechas, setFechas] = useState([]);
 
-  const [filteredSessions, setFilteredSessions] = useState([]);
   const [reservationLoadingId, setReservationLoadingId] = useState(null);
 
-  // 🔥 Cargar clases y sesiones
+  // CARGAR CLASES + SESIONES 
   useEffect(() => {
-    const fetchAll = async () => {
+    const loadData = async () => {
       try {
-        // 1️⃣ Clases
         const classesData = await getAllClasses();
-        setClasses(classesData);
+        const sessionsGrouped = await getAllSessions();
 
-        // 2️⃣ Sesiones
-        const sessionGroups = await getAllSessions();
-
-        // sessionGroups es algo así:
-        // [
-        //   { class_id, class_name, sessions: [] }
-        // ]
-
-        const flatSessions = [];
-
-        sessionGroups.forEach((group) => {
-          group.sessions.forEach((session) => {
-            flatSessions.push({
+        // Flatten de sesiones
+        const flat = sessionsGrouped.flatMap((group) =>
+          group.sessions.map((session) => {
+            const cls = classesData.find((c) => c.id === session.classRef.id);
+            return {
               ...session,
               classInfo: {
-                id: group.class_id,
-                title: group.class_name,
-                discipline: classesData.find((c) => c.id === group.class_id)?.discipline,
-                locationName: classesData.find((c) => c.id === group.class_id)?.locationName,
-                instructorName: classesData.find((c) => c.id === group.class_id)?.instructorName,
+                id: session.classRef.id,
+                title: session.classRef.title,
+                discipline: session.classRef.discipline,
+                description: session.classRef.description,
+                instructorName: session.classRef.instructorName,
               },
-            });
-          });
-        });
+              branchName: session.branch?.name,
+              branchLocation: session.branch?.location,
+            };
+          })
+        );
 
-        setSessions(flatSessions);
-        setFilteredSessions(flatSessions);
+        setSessions(flat);
+        setFilteredSessions(flat);
 
-        // Filtros
-        setSedes([...new Set(flatSessions.map((s) => s.classInfo.locationName).filter(Boolean))]);
-        setDisciplinas([...new Set(flatSessions.map((s) => s.classInfo.discipline).filter(Boolean))]);
-        setFechas([...new Set(flatSessions.map((s) => s.startAt.split("T")[0]))]);
-
+        // Construir filtros dinámicos
+        setSedes([...new Set(flat.map((s) => s.branchName).filter(Boolean))]);
+        setDisciplinas([
+          ...new Set(flat.map((s) => s.classInfo.discipline).filter(Boolean)),
+        ]);
+        setFechas([
+          ...new Set(flat.map((s) => s.startAt.split("T")[0]).filter(Boolean)),
+        ]);
       } catch (err) {
         console.error(err);
         setError("Error cargando clases o sesiones.");
@@ -85,21 +81,27 @@ export default function HomeScreen() {
       }
     };
 
-    fetchAll();
+    loadData();
   }, []);
 
-  // 🔎 Filtrar sesiones
+  //FILTROS
+
   useEffect(() => {
-    let filtered = sessions;
+    let result = sessions;
 
-    if (sede) filtered = filtered.filter((s) => s.classInfo.locationName === sede);
-    if (disciplina) filtered = filtered.filter((s) => s.classInfo.discipline === disciplina);
-    if (fecha) filtered = filtered.filter((s) => s.startAt.startsWith(fecha));
+    if (sede) result = result.filter((s) => s.branchName === sede);
+    if (disciplina)
+      result = result.filter(
+        (s) => s.classInfo.discipline === disciplina
+      );
+    if (fecha)
+      result = result.filter((s) => s.startAt.startsWith(fecha));
 
-    setFilteredSessions(filtered);
+    setFilteredSessions(result);
   }, [sede, disciplina, fecha, sessions]);
 
-  // 📌 Picker de iOS
+  // PICKER iOS
+  
   const showIOSPicker = (label, options, currentValue, onSelect) => {
     const items = ["Todas", ...options];
 
@@ -118,7 +120,6 @@ export default function HomeScreen() {
     );
   };
 
-  // 📌 Renderizador de filtro
   const renderFilter = (label, value, options, onChange) => {
     const displayValue = value || "Todas";
 
@@ -128,7 +129,9 @@ export default function HomeScreen() {
           <Text style={styles.label}>{label}</Text>
           <TouchableOpacity
             style={styles.pickerButton}
-            onPress={() => showIOSPicker(label, options, value, onChange)}
+            onPress={() =>
+              showIOSPicker(label, options, value, onChange)
+            }
           >
             <Text style={styles.pickerButtonText}>{displayValue}</Text>
             <Ionicons name="chevron-down" size={16} color="#fff" />
@@ -157,26 +160,8 @@ export default function HomeScreen() {
     );
   };
 
-  // Loader
-  if (loading) {
-    return (
-      <View style={styles.center}>
-        <ActivityIndicator size="large" color="#007AFF" />
-        <Text>Cargando clases y sesiones...</Text>
-      </View>
-    );
-  }
-
-  // Error
-  if (error) {
-    return (
-      <View style={styles.center}>
-        <Text style={styles.error}>{error}</Text>
-      </View>
-    );
-  }
-
-  // 📌 Reservar
+  // RESERVAR SESIÓN
+  
   const handleReserve = async (session) => {
     try {
       setReservationLoadingId(session.id);
@@ -184,13 +169,34 @@ export default function HomeScreen() {
       Alert.alert("Reserva creada", "Tu reserva fue registrada.");
     } catch (err) {
       console.error(err);
-      Alert.alert("Error", "No se pudo reservar esta sesión.");
+      Alert.alert("Error", "No se pudo reservar la clase.");
     } finally {
       setReservationLoadingId(null);
     }
   };
 
-  const formatDate = (iso) => new Date(iso).toLocaleDateString("es-AR");
+  // UI
+  
+  if (loading)
+    return (
+      <View style={styles.center}>
+        <ActivityIndicator size="large" color="#FFD800" />
+        <Text style={{ color: "#fff" }}>Cargando...</Text>
+      </View>
+    );
+
+  if (error)
+    return (
+      <View style={styles.center}>
+        <Text style={styles.error}>{error}</Text>
+      </View>
+    );
+
+  const formatDate = (iso) =>
+    new Date(iso).toLocaleString("es-AR", {
+      dateStyle: "medium",
+      timeStyle: "short",
+    });
 
   const renderItem = ({ item }) => {
     const reserving = reservationLoadingId === item.id;
@@ -199,14 +205,28 @@ export default function HomeScreen() {
       <View style={styles.card}>
         <Text style={styles.title}>{item.classInfo.title}</Text>
 
-        <Text style={styles.text}>Fecha: {formatDate(item.startAt)}</Text>
         <Text style={styles.text}>Disciplina: {item.classInfo.discipline}</Text>
+        <Text style={styles.text}>Fecha: {formatDate(item.startAt)}</Text>
         <Text style={styles.text}>Duración: {item.durationMin} min</Text>
-        <Text style={styles.text}>Profesor: {item.classInfo.instructorName ?? "No asignado"}</Text>
-        <Text style={styles.text}>Ubicación: {item.classInfo.locationName ?? "Sin ubicación"}</Text>
+        <Text style={styles.text}>
+          Cupos: {item.reservedCount}/{item.capacity}
+        </Text>
+        <Text style={styles.text}>
+          Profesor: {item.classInfo.instructorName || "No asignado"}
+        </Text>
+
+        <Text style={styles.text}>
+          Sede: {item.branchName || "Sin sede"}
+        </Text>
+        <Text style={styles.text}>
+          Dirección: {item.branchLocation || "No disponible"}
+        </Text>
 
         <TouchableOpacity
-          style={[styles.reserveButton, reserving && styles.reserveButtonDisabled]}
+          style={[
+            styles.reserveButton,
+            reserving && styles.reserveButtonDisabled,
+          ]}
           onPress={() => handleReserve(item)}
           disabled={reserving}
         >
@@ -220,7 +240,7 @@ export default function HomeScreen() {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.header}>Filtrar Sesiones</Text>
+      <Text style={styles.header}>Ritmo Fit</Text>
 
       {renderFilter("Sede", sede, sedes, setSede)}
       {renderFilter("Disciplina", disciplina, disciplinas, setDisciplina)}
@@ -228,15 +248,19 @@ export default function HomeScreen() {
 
       <FlatList
         data={filteredSessions}
-        keyExtractor={(item) => item.id.toString()}
+        keyExtractor={(item) => item.id}
         renderItem={renderItem}
-        ListEmptyComponent={<Text style={{ color: "#fff", textAlign: "center" }}>No hay sesiones disponibles</Text>}
+        ListEmptyComponent={
+          <Text style={{ color: "#fff", textAlign: "center" }}>
+            No hay clases disponibles
+          </Text>
+        }
       />
     </View>
   );
 }
 
-/* --- estilos --- */
+/* --- estilos (NO TOCAR) --- */
 
 const COLORS = {
   black: "#000000",
