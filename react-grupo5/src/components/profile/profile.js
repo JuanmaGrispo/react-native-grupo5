@@ -2,10 +2,12 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity,
-  ActivityIndicator, StyleSheet, Alert, ScrollView
+  ActivityIndicator, StyleSheet, Alert, ScrollView, Image
 } from 'react-native';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
-import { getCurrentUser, updateCurrentUserName } from '../../services/userService';
+import * as ImagePicker from 'expo-image-picker';
+import { getCurrentUser, updateCurrentUserName, updateCurrentUserProfilePicture } from '../../services/userService';
+import api from '../../services/apiService';
 
 const COLORS = {
   black: '#000000',
@@ -25,6 +27,7 @@ export default function ProfileScreen() {
   const [isEditing, setIsEditing] = useState(false);
   const [newName, setNewName] = useState('');
   const [saving, setSaving] = useState(false);   // PUT
+  const [uploadingImage, setUploadingImage] = useState(false);   // Para la carga de imagen
 
   async function fetchUser() {
     try {
@@ -71,6 +74,62 @@ export default function ProfileScreen() {
     }
   }
 
+  async function handlePickImage() {
+    try {
+      // Solicitar permisos
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert('Permisos necesarios', 'Necesitamos acceso a tu galería para cambiar la foto de perfil.');
+        return;
+      }
+
+      // Abrir el selector de imágenes
+      // En expo-image-picker v17+, usar string directamente o MediaTypeOptions (aunque deprecado, aún funciona)
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: 'images', // Usar string directamente (compatible con v17+)
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.8,
+      });
+
+      if (!result.canceled && result.assets && result.assets.length > 0) {
+        const imageUri = result.assets[0].uri;
+        await handleUploadImage(imageUri);
+      }
+    } catch (error) {
+      console.error('Error al seleccionar imagen:', error);
+      Alert.alert('Error', 'No se pudo seleccionar la imagen. Intentá nuevamente.');
+    }
+  }
+
+  async function handleUploadImage(imageUri) {
+    try {
+      setUploadingImage(true);
+      console.log('🖼️ Iniciando subida de imagen:', imageUri.substring(0, 50));
+      const updated = await updateCurrentUserProfilePicture(imageUri);
+      
+      // Actualizar el estado del usuario con la nueva información
+      setUser(updated);
+      
+      // Mostrar mensaje de éxito
+      Alert.alert('✅ Listo', 'Tu foto de perfil fue actualizada exitosamente.');
+    } catch (error) {
+      console.error('Error al subir imagen:', error);
+      
+      // Usar el mensaje del error (ya viene formateado desde userService)
+      let errorMessage = error.message || 'No se pudo actualizar la foto de perfil.';
+      
+      // Si es un error de red, agregar más contexto
+      if (error.message.includes('conexión') || error.message.includes('conect')) {
+        errorMessage = 'Error de conexión. Verificá que:\n• El servidor esté corriendo\n• Estés conectado a la misma red WiFi\n• La IP del servidor sea correcta';
+      }
+      
+      Alert.alert('❌ Error', errorMessage);
+    } finally {
+      setUploadingImage(false);
+    }
+  }
+
   if (loading) {
     return (
       <View style={[styles.container, styles.center]}>
@@ -96,6 +155,47 @@ export default function ProfileScreen() {
       {/* Título */}
       <Text style={styles.title}>RitmoFit</Text>
       <Text style={styles.subtitle}>Perfil</Text>
+
+      {/* Foto de perfil */}
+      <View style={styles.profilePictureContainer}>
+        <TouchableOpacity
+          onPress={handlePickImage}
+          disabled={uploadingImage}
+          style={styles.profilePictureWrapper}
+          accessible
+          accessibilityLabel="Cambiar foto de perfil"
+        >
+          {uploadingImage ? (
+            <View style={styles.profilePicturePlaceholder}>
+              <ActivityIndicator color={COLORS.yellow} />
+            </View>
+          ) : (
+            <>
+              {user?.photoUrl ? (
+                <Image
+                  source={{ 
+                    uri: user.photoUrl.startsWith('http') 
+                      ? user.photoUrl 
+                      : user.photoUrl.startsWith('/')
+                        ? `${api.defaults.baseURL.replace('/api/v1', '')}${user.photoUrl}`
+                        : `${api.defaults.baseURL.replace('/api/v1', '')}/${user.photoUrl}`
+                  }}
+                  style={styles.profilePicture}
+                />
+              ) : (
+                <View style={styles.profilePicturePlaceholder}>
+                  <Text style={styles.profilePictureInitial}>
+                    {user?.name?.charAt(0)?.toUpperCase() || 'U'}
+                  </Text>
+                </View>
+              )}
+              <View style={styles.profilePictureEditBadge}>
+                <Text style={styles.profilePictureEditIcon}>📷</Text>
+              </View>
+            </>
+          )}
+        </TouchableOpacity>
+      </View>
 
       {/* Fila: Nombre + Editar */}
       <View style={styles.row}>
@@ -268,5 +368,51 @@ const styles = StyleSheet.create({
   errorText: {
     color: COLORS.white,
     marginBottom: 12,
+  },
+  profilePictureContainer: {
+    alignItems: 'center',
+    marginBottom: 24,
+    marginTop: 8,
+  },
+  profilePictureWrapper: {
+    position: 'relative',
+  },
+  profilePicture: {
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    borderWidth: 3,
+    borderColor: COLORS.yellow,
+  },
+  profilePicturePlaceholder: {
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    backgroundColor: COLORS.gray,
+    borderWidth: 3,
+    borderColor: COLORS.yellow,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  profilePictureInitial: {
+    color: COLORS.white,
+    fontSize: 48,
+    fontWeight: '700',
+  },
+  profilePictureEditBadge: {
+    position: 'absolute',
+    bottom: 0,
+    right: 0,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: COLORS.yellow,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 3,
+    borderColor: COLORS.black,
+  },
+  profilePictureEditIcon: {
+    fontSize: 18,
   },
 });
