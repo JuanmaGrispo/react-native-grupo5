@@ -94,7 +94,7 @@ export default function HistorialScreen() {
     }
   };
 
-  // Función de filtrado por rango de fechas
+  // Función de filtrado por rango de fechas (acepta fechas opcionales)
   const filterByDateRange = (data, start, end) => {
     return data.filter((dto) => {
       if (!dto.session?.startAt) return false;
@@ -108,28 +108,41 @@ export default function HistorialScreen() {
         sessionDate.getMonth(),
         sessionDate.getDate()
       );
-      const startOnly = new Date(
-        start.getFullYear(),
-        start.getMonth(),
-        start.getDate()
-      );
-      const endOnly = new Date(
-        end.getFullYear(),
-        end.getMonth(),
-        end.getDate()
-      );
 
-      return sessionDateOnly >= startOnly && sessionDateOnly <= endOnly;
+      // Si hay fecha de inicio, verificar que la sesión sea >= inicio
+      if (start) {
+        const startOnly = new Date(
+          start.getFullYear(),
+          start.getMonth(),
+          start.getDate()
+        );
+        if (sessionDateOnly < startOnly) return false;
+      }
+
+      // Si hay fecha de fin, verificar que la sesión sea <= fin
+      if (end) {
+        const endOnly = new Date(
+          end.getFullYear(),
+          end.getMonth(),
+          end.getDate()
+        );
+        if (sessionDateOnly > endOnly) return false;
+      }
+
+      return true;
     });
   };
 
   // Aplicar filtro de fecha
   const applyDateFilter = () => {
-    if (!startDate || !endDate) {
-      Alert.alert("Error", "Seleccioná ambas fechas para filtrar.");
+    // Validar que haya al menos una fecha
+    if (!startDate && !endDate) {
+      Alert.alert("Error", "Seleccioná al menos una fecha para filtrar.");
       return;
     }
-    if (startDate > endDate) {
+
+    // Si hay ambas fechas, validar que inicio <= fin
+    if (startDate && endDate && startDate > endDate) {
       Alert.alert("Error", "La fecha de inicio debe ser anterior a la fecha de fin.");
       return;
     }
@@ -179,9 +192,10 @@ export default function HistorialScreen() {
     }
   };
 
-  // Formatear rango de fechas
+  // Formatear rango de fechas (maneja fechas opcionales)
   const formatDateRange = (start, end) => {
     const formatDate = (date) => {
+      if (!date) return "";
       const day = date.getDate();
       const monthNames = [
         "Ene",
@@ -199,10 +213,17 @@ export default function HistorialScreen() {
       ];
       const month = monthNames[date.getMonth()];
       const year = date.getFullYear();
-      return `${day} ${month}${date === end ? ` ${year}` : ""}`;
+      return `${day} ${month} ${year}`;
     };
 
-    return `${formatDate(start)} - ${formatDate(end)}`;
+    if (start && end) {
+      return `${formatDate(start)} - ${formatDate(end)}`;
+    } else if (start) {
+      return `Desde ${formatDate(start)}`;
+    } else if (end) {
+      return `Hasta ${formatDate(end)}`;
+    }
+    return "";
   };
 
   // Transformar datos a formato UI
@@ -285,7 +306,10 @@ export default function HistorialScreen() {
     }
   };
 
-  const canApplyFilter = startDate !== null && endDate !== null && startDate <= endDate;
+  // Permitir aplicar filtro si hay al menos una fecha, y si hay ambas, validar que inicio <= fin
+  const canApplyFilter = 
+    (startDate !== null || endDate !== null) && 
+    (!startDate || !endDate || startDate <= endDate);
 
   const renderItem = ({ item }) => {
     return (
@@ -375,20 +399,39 @@ export default function HistorialScreen() {
           <TouchableOpacity
             style={[
               styles.filterButton,
-              styles.filterButtonApply,
-              !canApplyFilter && styles.filterButtonDisabled,
+              canApplyFilter
+                ? styles.filterButtonApply
+                : styles.filterButtonDisabled,
             ]}
             onPress={applyDateFilter}
             disabled={!canApplyFilter}
           >
-            <Text style={styles.filterButtonText}>Aplicar Filtro</Text>
+            <Text
+              style={[
+                canApplyFilter
+                  ? styles.filterButtonTextActive
+                  : styles.filterButtonText,
+              ]}
+            >
+              Aplicar Filtro
+            </Text>
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={[styles.filterButton, styles.filterButtonClear]}
+            style={[
+              styles.filterButton,
+              isFilterActive ? styles.filterButtonClearActive : styles.filterButtonClear,
+            ]}
             onPress={clearDateFilter}
           >
-            <Text style={styles.filterButtonText}>Limpiar</Text>
+            <Text
+              style={[
+                styles.filterButtonText,
+                isFilterActive && styles.filterButtonTextActive,
+              ]}
+            >
+              Limpiar
+            </Text>
           </TouchableOpacity>
         </View>
 
@@ -519,10 +562,19 @@ const styles = StyleSheet.create({
   filterButtonClear: {
     backgroundColor: COLORS.gray,
   },
+  filterButtonClearActive: {
+    backgroundColor: COLORS.yellow,
+  },
   filterButtonDisabled: {
-    opacity: 0.5,
+    backgroundColor: COLORS.gray,
+    opacity: 1,
   },
   filterButtonText: {
+    color: COLORS.white,
+    fontWeight: "700",
+    fontSize: 14,
+  },
+  filterButtonTextActive: {
     color: COLORS.black,
     fontWeight: "700",
     fontSize: 14,
