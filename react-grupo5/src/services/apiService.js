@@ -1,37 +1,75 @@
 import axios from "axios";
-import { getToken } from "../utils/tokenStorage"; 
+import { getToken } from "../utils/tokenStorage";
 
+//const API_BASE_URL = "http://localhost:3000/api/v1";
 
+//const API_BASE_URL = "http://192.168.1.25:3000/api/v1";
 
-//const API_BASE_URL = "http://localhost:3000/api/v1"; // Cambiar si usás emulador Android o dispositivo físico
-
-//Web
-//const API_BASE_URL = "http://localhost:3000/api/v1"; 
-
-//Android porque sino no anda
-const API_BASE_URL = "http://192.168.0.26:3000/api/v1";
+const API_BASE_URL = "http://10.0.2.2:3000/api/v1";
 
 
 
 
-const api = axios.create({
-  baseURL: API_BASE_URL,
-  timeout: 5000,
-});
 
-// Función para obtener clases con Bearer Token
-export const getClasses = async (token) => {
-  try {
-    const response = await api.get("/classes", {
-      headers: {
-        Authorization: `Bearer ${token}`,  // <--- Aca va el token
-      },
-    });
-    return response.data;
-  } catch (error) {
-    console.error("Error fetching classes:", error.response?.status, error.response?.data);
-    throw error;
-  }
+// 🔹 Obtener todas las clases
+export const getAllClasses = async () => {
+  const token = await getToken();
+
+  const res = await axios.get(`${API_BASE_URL}/classes`, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
+  return res.data;
 };
 
-export default api;
+// 🔹 Obtener todas las sesiones de TODAS las clases
+export const getAllSessions = async () => {
+  const token = await getToken();
+
+  const res = await axios.get(`${API_BASE_URL}/classes`, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
+  const classes = res.data;
+
+  const allSessions = [];
+
+  for (const cls of classes) {
+    const sessionsResponse = await axios.get(
+      `${API_BASE_URL}/classes/${cls.id}/sessions`,
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      }
+    );
+
+    allSessions.push({
+      class_id: cls.id,
+      class_name: cls.name,
+      sessions: sessionsResponse.data,
+    });
+  }
+
+  return allSessions;
+};
+
+// 🔹 Obtener sesiones sólo de UNA clase específica
+export const getClassSessions = async (classId) => {
+  const token = await getToken();
+
+  const res = await axios.get(
+    `${API_BASE_URL}/classes/${classId}/sessions`,
+    {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    }
+  );
+
+  return res.data;
+};

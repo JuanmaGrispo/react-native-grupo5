@@ -10,106 +10,102 @@ import {
   Platform,
   ActionSheetIOS,
 } from "react-native";
-import * as Notifications from "expo-notifications";
-import { Camera } from "expo-camera";
-import AsyncStorage from "@react-native-async-storage/async-storage";
-import { getToken } from "../../utils/tokenStorage"; // IMPORTANTE
-import { getClasses } from "../../services/apiService";
-import { createReservation } from "../../services/reservationService";
+
 import { Picker } from "@react-native-picker/picker";
 import { Ionicons } from "@expo/vector-icons";
 
+import { getAllClasses, getAllSessions } from "../../services/apiService";
+import { createReservation } from "../../services/reservationService";
+
 export default function HomeScreen() {
+  const [sessions, setSessions] = useState([]);
   const [classes, setClasses] = useState([]);
+
   const [loading, setLoading] = useState(true);
-  const [filteredClasses, setFilteredClasses] = useState([]);
   const [error, setError] = useState(null);
-  const [loadingClasses, setLoadingClasses] = useState(true);
-  const [loadingPermissions, setLoadingPermissions] = useState(true);
-  const [reservationLoadingId, setReservationLoadingId] = useState(null);
 
   // Filtros
   const [sede, setSede] = useState("");
   const [disciplina, setDisciplina] = useState("");
   const [fecha, setFecha] = useState("");
 
-  // Opciones únicas
   const [sedes, setSedes] = useState([]);
   const [disciplinas, setDisciplinas] = useState([]);
   const [fechas, setFechas] = useState([]);
 
-  //  Obtener token real y cargar clases
+  const [filteredSessions, setFilteredSessions] = useState([]);
+  const [reservationLoadingId, setReservationLoadingId] = useState(null);
+
+  // 🔥 Cargar clases y sesiones
   useEffect(() => {
-    const fetchClasses = async () => {
+    const fetchAll = async () => {
       try {
-        const token = await getToken(); // Token  desde AsyncStorage
+        // 1️⃣ Clases
+        const classesData = await getAllClasses();
+        setClasses(classesData);
 
-        if (!token) {
-          setError("No se encontró el token. Iniciá sesión nuevamente.");
-          setLoadingClasses(false);
-          return;
-        }
+        // 2️⃣ Sesiones
+        const sessionGroups = await getAllSessions();
 
-        const data = await getClasses(token);
-        setClasses(data);
-        setFilteredClasses(data);
+        // sessionGroups es algo así:
+        // [
+        //   { class_id, class_name, sessions: [] }
+        // ]
 
-        // Generar opciones únicas para los dropdowns
-        const sedesUnicas = [...new Set(data.map((c) => c.locationName).filter(Boolean))];
-        const disciplinasUnicas = [...new Set(data.map((c) => c.discipline).filter(Boolean))];
-        const fechasUnicas = [...new Set(data.map((c) => c.createdAt.split("T")[0]))];
+        const flatSessions = [];
 
-        setSedes(sedesUnicas);
-        setDisciplinas(disciplinasUnicas);
-        setFechas(fechasUnicas);
+        sessionGroups.forEach((group) => {
+          group.sessions.forEach((session) => {
+            flatSessions.push({
+              ...session,
+              classInfo: {
+                id: group.class_id,
+                title: group.class_name,
+                discipline: classesData.find((c) => c.id === group.class_id)?.discipline,
+                locationName: classesData.find((c) => c.id === group.class_id)?.locationName,
+                instructorName: classesData.find((c) => c.id === group.class_id)?.instructorName,
+              },
+            });
+          });
+        });
+
+        setSessions(flatSessions);
+        setFilteredSessions(flatSessions);
+
+        // Filtros
+        setSedes([...new Set(flatSessions.map((s) => s.classInfo.locationName).filter(Boolean))]);
+        setDisciplinas([...new Set(flatSessions.map((s) => s.classInfo.discipline).filter(Boolean))]);
+        setFechas([...new Set(flatSessions.map((s) => s.startAt.split("T")[0]))]);
+
       } catch (err) {
-        console.error("Error al cargar clases:", err);
-        setError("Error al cargar las clases.");
+        console.error(err);
+        setError("Error cargando clases o sesiones.");
       } finally {
         setLoading(false);
       }
     };
 
-    fetchClasses();
+    fetchAll();
   }, []);
 
-
-  // Filtrado dinámico
+  // 🔎 Filtrar sesiones
   useEffect(() => {
-    let filtered = classes;
+    let filtered = sessions;
 
-    if (sede) filtered = filtered.filter((c) => c.locationName === sede);
-    if (disciplina) filtered = filtered.filter((c) => c.discipline === disciplina);
-    if (fecha) filtered = filtered.filter((c) => c.createdAt.startsWith(fecha));
+    if (sede) filtered = filtered.filter((s) => s.classInfo.locationName === sede);
+    if (disciplina) filtered = filtered.filter((s) => s.classInfo.discipline === disciplina);
+    if (fecha) filtered = filtered.filter((s) => s.startAt.startsWith(fecha));
 
-    setFilteredClasses(filtered);
-  }, [sede, disciplina, fecha, classes]);
+    setFilteredSessions(filtered);
+  }, [sede, disciplina, fecha, sessions]);
 
-  // ⏳ Loader
-  if (loading) {
-    return (
-      <View style={styles.center}>
-        <ActivityIndicator size="large" color="#007AFF" />
-        <Text>Cargando clases...</Text>
-      </View>
-    );
-  }
-
-  // ❌ Error
-  if (error) {
-    return (
-      <View style={styles.center}>
-        <Text style={styles.error}>{error}</Text>
-      </View>
-    );
-  }
-
-  const showIOSPicker = (title, options, currentValue, onSelect) => {
+  // 📌 Picker de iOS
+  const showIOSPicker = (label, options, currentValue, onSelect) => {
     const items = ["Todas", ...options];
+
     ActionSheetIOS.showActionSheetWithOptions(
       {
-        title,
-        message: "Seleccioná una opción",
+        title: label,
         options: [...items, "Cancelar"],
         cancelButtonIndex: items.length,
         userInterfaceStyle: "dark",
@@ -122,6 +118,7 @@ export default function HomeScreen() {
     );
   };
 
+  // 📌 Renderizador de filtro
   const renderFilter = (label, value, options, onChange) => {
     const displayValue = value || "Todas";
 
@@ -132,10 +129,9 @@ export default function HomeScreen() {
           <TouchableOpacity
             style={styles.pickerButton}
             onPress={() => showIOSPicker(label, options, value, onChange)}
-            activeOpacity={0.7}
           >
             <Text style={styles.pickerButtonText}>{displayValue}</Text>
-            <Ionicons name="chevron-down" size={16} color={COLORS.white} />
+            <Ionicons name="chevron-down" size={16} color="#fff" />
           </TouchableOpacity>
         </View>
       );
@@ -147,13 +143,13 @@ export default function HomeScreen() {
         <View style={styles.pickerContainer}>
           <Picker
             selectedValue={value}
-            onValueChange={(selectedValue) => onChange(selectedValue)}
-            dropdownIconColor={COLORS.white}
+            onValueChange={onChange}
+            dropdownIconColor="#fff"
             style={styles.picker}
           >
             <Picker.Item label="Todas" value="" />
-            {options.map((option) => (
-              <Picker.Item key={option} label={option} value={option} />
+            {options.map((opt) => (
+              <Picker.Item key={opt} label={opt} value={opt} />
             ))}
           </Picker>
         </View>
@@ -161,74 +157,62 @@ export default function HomeScreen() {
     );
   };
 
-  // ✅ Lista
+  // Loader
+  if (loading) {
+    return (
+      <View style={styles.center}>
+        <ActivityIndicator size="large" color="#007AFF" />
+        <Text>Cargando clases y sesiones...</Text>
+      </View>
+    );
+  }
+
+  // Error
+  if (error) {
+    return (
+      <View style={styles.center}>
+        <Text style={styles.error}>{error}</Text>
+      </View>
+    );
+  }
+
+  // 📌 Reservar
   const handleReserve = async (session) => {
-    const sessionId = session?.id ?? session?.sessionId ?? session?.session?.id;
-
-    if (!sessionId) {
-      Alert.alert("Error", "Esta clase no tiene un identificador de sesión válido.");
-      return;
-    }
-
     try {
-      setReservationLoadingId(sessionId);
-      await createReservation(sessionId);
-      Alert.alert("Reserva creada", "Tu reserva se registró correctamente.");
-    } catch (error) {
-      const status = error?.response?.status;
-      const backendMessage = error?.response?.data?.message;
-
-      let message = backendMessage || "No se pudo crear la reserva. Intentá nuevamente.";
-
-      if (status === 401 || status === 403) {
-        message = "Tu sesión expiró. Iniciá sesión otra vez para reservar.";
-      } else if (status === 404) {
-        message = "La clase ya no está disponible.";
-      } else if (status === 409) {
-        message = "Ya tenés una reserva para esta clase.";
-      }
-
-      Alert.alert("Error al reservar", message);
+      setReservationLoadingId(session.id);
+      await createReservation(session.id);
+      Alert.alert("Reserva creada", "Tu reserva fue registrada.");
+    } catch (err) {
+      console.error(err);
+      Alert.alert("Error", "No se pudo reservar esta sesión.");
     } finally {
       setReservationLoadingId(null);
     }
   };
 
-  const formatDate = (isoDate) => {
-    if (!isoDate) return "Fecha no disponible";
-    try {
-      const date = new Date(isoDate);
-      return date.toLocaleDateString("es-AR", {
-        day: "2-digit",
-        month: "2-digit",
-        year: "numeric",
-      });
-    } catch (error) {
-      return "Fecha no disponible";
-    }
-  };
+  const formatDate = (iso) => new Date(iso).toLocaleDateString("es-AR");
 
   const renderItem = ({ item }) => {
-    const sessionId = item?.id ?? item?.sessionId ?? item?.session?.id;
-    const reserving = reservationLoadingId === sessionId;
-    const formattedDate = formatDate(item?.createdAt);
+    const reserving = reservationLoadingId === item.id;
 
     return (
       <View style={styles.card}>
-        <Text style={styles.title}>{item.title}</Text>
-        <Text style={styles.dateText}>Fecha: {formattedDate}</Text>
-        <Text style={styles.text}>Disciplina: {item.discipline}</Text>
-        <Text style={styles.text}>Duración: {item.defaultDurationMin} min</Text>
-        <Text style={styles.text}>Cupos: {item.defaultCapacity}</Text>
-        <Text style={styles.text}>Profesor: {item.instructorName ?? "Sin asignar"}</Text>
-        <Text style={styles.text}>Ubicación: {item.locationName ?? "No especificada"}</Text>
+        <Text style={styles.title}>{item.classInfo.title}</Text>
+
+        <Text style={styles.text}>Fecha: {formatDate(item.startAt)}</Text>
+        <Text style={styles.text}>Disciplina: {item.classInfo.discipline}</Text>
+        <Text style={styles.text}>Duración: {item.durationMin} min</Text>
+        <Text style={styles.text}>Profesor: {item.classInfo.instructorName ?? "No asignado"}</Text>
+        <Text style={styles.text}>Ubicación: {item.classInfo.locationName ?? "Sin ubicación"}</Text>
+
         <TouchableOpacity
           style={[styles.reserveButton, reserving && styles.reserveButtonDisabled]}
           onPress={() => handleReserve(item)}
           disabled={reserving}
-          activeOpacity={0.7}
         >
-          <Text style={styles.reserveButtonText}>{reserving ? "Reservando..." : "Reservar"}</Text>
+          <Text style={styles.reserveButtonText}>
+            {reserving ? "Reservando..." : "Reservar"}
+          </Text>
         </TouchableOpacity>
       </View>
     );
@@ -236,22 +220,23 @@ export default function HomeScreen() {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.header}>Filtrar Clases</Text>
+      <Text style={styles.header}>Filtrar Sesiones</Text>
 
       {renderFilter("Sede", sede, sedes, setSede)}
       {renderFilter("Disciplina", disciplina, disciplinas, setDisciplina)}
       {renderFilter("Fecha", fecha, fechas, setFecha)}
 
       <FlatList
-        data={filteredClasses}
+        data={filteredSessions}
         keyExtractor={(item) => item.id.toString()}
         renderItem={renderItem}
-        contentContainerStyle={{ paddingBottom: 20 }}
-        ListEmptyComponent={<Text style={{ textAlign: "center" }}>No hay clases disponibles</Text>}
+        ListEmptyComponent={<Text style={{ color: "#fff", textAlign: "center" }}>No hay sesiones disponibles</Text>}
       />
     </View>
   );
 }
+
+/* --- estilos --- */
 
 const COLORS = {
   black: "#000000",
@@ -269,6 +254,17 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
     paddingTop: 49,
     paddingBottom: 24,
+  },
+  center: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: COLORS.black,
+  },
+  error: {
+    color: COLORS.red,
+    fontSize: 16,
+    textAlign: "center",
   },
   header: {
     color: COLORS.yellow,
@@ -291,7 +287,6 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: COLORS.gray,
     borderRadius: 8,
-    marginBottom: 10,
     backgroundColor: COLORS.darkerGray,
     overflow: "hidden",
   },
@@ -306,7 +301,6 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.darkerGray,
     paddingHorizontal: 14,
     paddingVertical: 12,
-    marginBottom: 4,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
@@ -345,28 +339,10 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     marginBottom: 8,
   },
-  dateText: {
-    color: COLORS.white,
-    fontSize: 14,
-    fontWeight: "700",
-    marginBottom: 6,
-  },
   text: {
     color: COLORS.white,
     fontSize: 14,
     marginBottom: 4,
     opacity: 0.9,
   },
-  center: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    backgroundColor: COLORS.black,
-  },
-  error: {
-    color: COLORS.red,
-    fontSize: 16,
-    textAlign: "center",
-  },
 });
-
