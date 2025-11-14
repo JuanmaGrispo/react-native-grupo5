@@ -1,13 +1,10 @@
 import axios from "axios";
-import { getToken } from "../utils/tokenStorage"; 
+import { getToken } from "../utils/tokenStorage";
+import Constants from "expo-constants";
 
-//const API_BASE_URL = "http://localhost:9100/api/v1"; // Cambiar si usás emulador Android o dispositivo físico
-
-//Web
-//const API_BASE_URL = "http://localhost:9100/api/v1"; 
-
-//Android porque sino no anda - IMPORTANTE: El backend NestJS usa puerto 9100 por defecto
-const API_BASE_URL = "http://192.168.0.26:3000/api/v1";
+// Obtener la URL base de la API desde las variables de entorno
+// Si no está configurada, usar localhost por defecto
+const API_BASE_URL = Constants.expoConfig?.extra?.apiBaseUrl || "http://localhost:3000/api/v1";
 
 const api = axios.create({
   baseURL: API_BASE_URL,
