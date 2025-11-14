@@ -69,7 +69,7 @@ api.interceptors.response.use(
 );
 
 
-// 🔹 Obtener todas las clases
+// Obtener todas las clases
 export const getAllClasses = async () => {
   const token = await getToken();
 
@@ -82,55 +82,44 @@ export const getAllClasses = async () => {
   return res.data;
 };
 
-// 🔹 Obtener todas las sesiones de TODAS las clases
+// Obtener todas las sesiones
 export const getAllSessions = async () => {
   const token = await getToken();
 
-  const res = await axios.get(`${API_BASE_URL}/classes`, {
+  const res = await axios.get(`${API_BASE_URL}/classes/sessions`, {
     headers: {
       Authorization: `Bearer ${token}`,
     },
   });
 
-  const classes = res.data;
+  const items = res.data.items || [];
 
-  const allSessions = [];
+  // Agrupar por clase
+  const grouped = {};
 
-  for (const cls of classes) {
-    const sessionsResponse = await axios.get(
-      `${API_BASE_URL}/classes/${cls.id}/sessions`,
-      {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      }
-    );
+  items.forEach((session) => {
+    const classId = session.classRef.id;
+    const className = session.classRef.title;
 
-    allSessions.push({
-      class_id: cls.id,
-      class_name: cls.name,
-      sessions: sessionsResponse.data,
-    });
-  }
-
-  return allSessions;
-};
-
-// 🔹 Obtener sesiones sólo de UNA clase específica
-export const getClassSessions = async (classId) => {
-  const token = await getToken();
-
-  const res = await axios.get(
-    `${API_BASE_URL}/classes/${classId}/sessions`,
-    {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
+    if (!grouped[classId]) {
+      grouped[classId] = {
+        class_id: classId,
+        class_name: className,
+        sessions: [],
+      };
     }
-  );
 
-  return res.data;
+    grouped[classId].sessions.push(session);
+  });
+
+  // Convertir object → array
+  return Object.values(grouped);
 };
+
+
+
+
+
 
 // Exportar la instancia de axios configurada como default
 export default api;
