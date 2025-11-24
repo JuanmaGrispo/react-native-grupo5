@@ -9,6 +9,7 @@ import {
   TouchableOpacity,
   Platform,
   ActionSheetIOS,
+  Linking,
 } from "react-native";
 
 import { Picker } from "@react-native-picker/picker";
@@ -36,14 +37,42 @@ export default function HomeScreen() {
 
   const [reservationLoadingId, setReservationLoadingId] = useState(null);
 
-  // CARGAR CLASES + SESIONES 
+  // DIRECCIÓN FIJA DE LA SEDE (puede ser dinámica si querés)
+  const sedeDireccion = "Av. Corrientes 1234, Buenos Aires";
+
+  // --- Función para abrir Google Maps ---
+  const openMaps = (address) => {
+    if (!address) {
+      Alert.alert("Dirección no disponible", "No se pudo abrir Google Maps.");
+      return;
+    }
+
+    const url =
+      Platform.OS === "ios"
+        ? `http://maps.apple.com/?q=${encodeURIComponent(address)}`
+        : `geo:0,0?q=${encodeURIComponent(address)}`;
+
+    Linking.canOpenURL(url)
+      .then((supported) => {
+        if (supported) {
+          Linking.openURL(url);
+        } else {
+          Alert.alert(
+            "Error",
+            "No se pudo abrir Google Maps. Verifica que tengas instalada la app."
+          );
+        }
+      })
+      .catch((err) => console.error("Error abriendo Maps:", err));
+  };
+
+  // --- CARGAR CLASES + SESIONES ---
   useEffect(() => {
     const loadData = async () => {
       try {
         const classesData = await getAllClasses();
         const sessionsGrouped = await getAllSessions();
 
-        // Flatten de sesiones
         const flat = sessionsGrouped.flatMap((group) =>
           group.sessions.map((session) => {
             const cls = classesData.find((c) => c.id === session.classRef.id);
@@ -65,7 +94,6 @@ export default function HomeScreen() {
         setSessions(flat);
         setFilteredSessions(flat);
 
-        // Construir filtros dinámicos
         setSedes([...new Set(flat.map((s) => s.branchName).filter(Boolean))]);
         setDisciplinas([
           ...new Set(flat.map((s) => s.classInfo.discipline).filter(Boolean)),
@@ -84,24 +112,15 @@ export default function HomeScreen() {
     loadData();
   }, []);
 
-  //FILTROS
-
+  // --- FILTROS ---
   useEffect(() => {
     let result = sessions;
-
     if (sede) result = result.filter((s) => s.branchName === sede);
-    if (disciplina)
-      result = result.filter(
-        (s) => s.classInfo.discipline === disciplina
-      );
-    if (fecha)
-      result = result.filter((s) => s.startAt.startsWith(fecha));
-
+    if (disciplina) result = result.filter((s) => s.classInfo.discipline === disciplina);
+    if (fecha) result = result.filter((s) => s.startAt.startsWith(fecha));
     setFilteredSessions(result);
   }, [sede, disciplina, fecha, sessions]);
 
-  // PICKER iOS
-  
   const showIOSPicker = (label, options, currentValue, onSelect) => {
     const items = ["Todas", ...options];
 
@@ -129,9 +148,7 @@ export default function HomeScreen() {
           <Text style={styles.label}>{label}</Text>
           <TouchableOpacity
             style={styles.pickerButton}
-            onPress={() =>
-              showIOSPicker(label, options, value, onChange)
-            }
+            onPress={() => showIOSPicker(label, options, value, onChange)}
           >
             <Text style={styles.pickerButtonText}>{displayValue}</Text>
             <Ionicons name="chevron-down" size={16} color="#fff" />
@@ -160,8 +177,7 @@ export default function HomeScreen() {
     );
   };
 
-  // RESERVAR SESIÓN
-  
+  // --- RESERVAR SESIÓN ---
   const handleReserve = async (session) => {
     try {
       setReservationLoadingId(session.id);
@@ -175,8 +191,6 @@ export default function HomeScreen() {
     }
   };
 
-  // UI
-  
   if (loading)
     return (
       <View style={styles.center}>
@@ -193,10 +207,7 @@ export default function HomeScreen() {
     );
 
   const formatDate = (iso) =>
-    new Date(iso).toLocaleString("es-AR", {
-      dateStyle: "medium",
-      timeStyle: "short",
-    });
+    new Date(iso).toLocaleString("es-AR", { dateStyle: "medium", timeStyle: "short" });
 
   const renderItem = ({ item }) => {
     const reserving = reservationLoadingId === item.id;
@@ -204,7 +215,6 @@ export default function HomeScreen() {
     return (
       <View style={styles.card}>
         <Text style={styles.title}>{item.classInfo.title}</Text>
-
         <Text style={styles.text}>Disciplina: {item.classInfo.discipline}</Text>
         <Text style={styles.text}>Fecha: {formatDate(item.startAt)}</Text>
         <Text style={styles.text}>Duración: {item.durationMin} min</Text>
@@ -214,25 +224,28 @@ export default function HomeScreen() {
         <Text style={styles.text}>
           Profesor: {item.classInfo.instructorName || "No asignado"}
         </Text>
-
-        <Text style={styles.text}>
-          Sede: {item.branchName || "Sin sede"}
-        </Text>
+        <Text style={styles.text}>Sede: {item.branchName || "Sin sede"}</Text>
         <Text style={styles.text}>
           Dirección: {item.branchLocation || "No disponible"}
         </Text>
 
         <TouchableOpacity
-          style={[
-            styles.reserveButton,
-            reserving && styles.reserveButtonDisabled,
-          ]}
+          style={[styles.reserveButton, reserving && styles.reserveButtonDisabled]}
           onPress={() => handleReserve(item)}
           disabled={reserving}
         >
           <Text style={styles.reserveButtonText}>
             {reserving ? "Reservando..." : "Reservar"}
           </Text>
+        </TouchableOpacity>
+
+        {/* BOTÓN CÓMO LLEGAR */}
+        <TouchableOpacity
+          style={[styles.mapButton, !item.branchLocation && { opacity: 0.6 }]}
+          onPress={() => openMaps(item.branchLocation || sedeDireccion)}
+          disabled={!item.branchLocation && !sedeDireccion}
+        >
+          <Text style={styles.mapButtonText}>Cómo llegar</Text>
         </TouchableOpacity>
       </View>
     );
@@ -241,6 +254,11 @@ export default function HomeScreen() {
   return (
     <View style={styles.container}>
       <Text style={styles.header}>Ritmo Fit</Text>
+
+      {/* BOTÓN FIJO DE MAPA - SIEMPRE VISIBLE */}
+      <TouchableOpacity style={styles.mapButton} onPress={() => openMaps(sedeDireccion)}>
+        <Text style={styles.mapButtonText}>Cómo llegar a la sede</Text>
+      </TouchableOpacity>
 
       {renderFilter("Sede", sede, sedes, setSede)}
       {renderFilter("Disciplina", disciplina, disciplinas, setDisciplina)}
@@ -251,7 +269,7 @@ export default function HomeScreen() {
         keyExtractor={(item) => item.id}
         renderItem={renderItem}
         ListEmptyComponent={
-          <Text style={{ color: "#fff", textAlign: "center" }}>
+          <Text style={{ color: "#fff", textAlign: "center", marginTop: 20 }}>
             No hay clases disponibles
           </Text>
         }
@@ -260,8 +278,7 @@ export default function HomeScreen() {
   );
 }
 
-/* --- estilos (NO TOCAR) --- */
-
+/* --- estilos --- */
 const COLORS = {
   black: "#000000",
   white: "#FFFFFF",
@@ -272,101 +289,33 @@ const COLORS = {
 };
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: COLORS.black,
-    paddingHorizontal: 24,
-    paddingTop: 49,
-    paddingBottom: 24,
-  },
-  center: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    backgroundColor: COLORS.black,
-  },
-  error: {
-    color: COLORS.red,
-    fontSize: 16,
-    textAlign: "center",
-  },
-  header: {
-    color: COLORS.yellow,
-    fontSize: 42,
-    textAlign: "center",
-    fontWeight: "700",
-    marginBottom: 24,
-  },
-  label: {
-    color: COLORS.white,
-    fontSize: 16,
-    fontWeight: "600",
-    marginTop: 10,
-    marginBottom: 4,
-  },
-  filterGroup: {
-    marginBottom: 12,
-  },
-  pickerContainer: {
-    borderWidth: 1,
-    borderColor: COLORS.gray,
-    borderRadius: 8,
-    backgroundColor: COLORS.darkerGray,
-    overflow: "hidden",
-  },
-  picker: {
-    color: COLORS.white,
-    height: 44,
-  },
-  pickerButton: {
-    borderWidth: 1,
-    borderColor: COLORS.gray,
-    borderRadius: 8,
-    backgroundColor: COLORS.darkerGray,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-  },
-  pickerButtonText: {
-    color: COLORS.white,
-    fontSize: 16,
-    fontWeight: "500",
-  },
-  card: {
-    backgroundColor: COLORS.darkerGray,
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 16,
-    borderWidth: 1,
-    borderColor: "#333",
-  },
-  reserveButton: {
-    marginTop: 12,
-    backgroundColor: COLORS.yellow,
-    borderRadius: 8,
-    paddingVertical: 10,
-    alignItems: "center",
-  },
-  reserveButtonDisabled: {
-    opacity: 0.6,
-  },
-  reserveButtonText: {
-    color: COLORS.black,
-    fontSize: 16,
-    fontWeight: "600",
-  },
-  title: {
-    color: COLORS.white,
-    fontSize: 18,
-    fontWeight: "600",
-    marginBottom: 8,
-  },
-  text: {
-    color: COLORS.white,
-    fontSize: 14,
-    marginBottom: 4,
-    opacity: 0.9,
-  },
+  container: { flex: 1, backgroundColor: COLORS.black, paddingHorizontal: 24, paddingTop: 49, paddingBottom: 24 },
+  center: { flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: COLORS.black },
+  error: { color: COLORS.red, fontSize: 16, textAlign: "center" },
+  header: { color: COLORS.yellow, fontSize: 42, textAlign: "center", fontWeight: "700", marginBottom: 24 },
+  label: { color: COLORS.white, fontSize: 16, fontWeight: "600", marginTop: 10, marginBottom: 4 },
+  filterGroup: { marginBottom: 12 },
+  pickerContainer: { borderWidth: 1, borderColor: COLORS.gray, borderRadius: 8, backgroundColor: COLORS.darkerGray, overflow: "hidden" },
+  picker: { color: COLORS.white, height: 44 },
+  pickerButton: { borderWidth: 1, borderColor: COLORS.gray, borderRadius: 8, backgroundColor: COLORS.darkerGray, paddingHorizontal: 14, paddingVertical: 12, flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
+  pickerButtonText: { color: COLORS.white, fontSize: 16, fontWeight: "500" },
+  card: { backgroundColor: COLORS.darkerGray, borderRadius: 12, padding: 16, marginBottom: 16, borderWidth: 1, borderColor: "#333" },
+  reserveButton: { marginTop: 12, backgroundColor: COLORS.yellow, borderRadius: 8, paddingVertical: 10, alignItems: "center" },
+  reserveButtonDisabled: { opacity: 0.6 },
+  reserveButtonText: { color: COLORS.black, fontSize: 16, fontWeight: "600" },
+  title: { color: COLORS.white, fontSize: 18, fontWeight: "600", marginBottom: 8 },
+  text: { color: COLORS.white, fontSize: 14, marginBottom: 4, opacity: 0.9 },
+mapButton: { 
+  marginTop: 12, 
+  backgroundColor: "#FFD800", 
+  borderRadius: 8, 
+  paddingVertical: 10, 
+  alignItems: "center" 
+},
+mapButtonText: { 
+  color: "#000000", // negro
+  fontSize: 16, 
+  fontWeight: "600" 
+},
+
 });
