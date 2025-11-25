@@ -13,6 +13,7 @@ import ReservationsScreen from "../components/reservations/ReservationsScreen";
 import HistorialScreen from "../components/Historial/HistorialScreen";
 import { AuthContext } from "../context/AuthContext";
 import { View, ActivityIndicator } from "react-native";
+import NovedadesScreen from "../components/Novedades/novedades";
 
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -74,6 +75,21 @@ function MainTabs() {
         component={ProfileScreen}
         options={{ tabBarLabel: "Perfil" }}
       />
+      <Tab.Screen 
+        name="Novedades" 
+        component={NovedadesScreen}
+        options={{ 
+          tabBarLabel: "Novedades",
+          tabBarIcon: ({ focused, color, size }) => (
+            <Ionicons 
+              name={focused ? "megaphone" : "megaphone-outline"} 
+              size={size} 
+              color={color} 
+            />
+          ),
+        }}
+      />
+
     </Tab.Navigator>
   );
 }

@@ -27,7 +27,7 @@
 5. **Ejemplo:**
    Si tu IP es `192.168.1.100`, tu `.env` debería verse así:
    ```
-   API_BASE_URL=http://192.168.1.100:3000/api/v1
+   
    ```
 
 6. **Reiniciar el servidor de Expo:**

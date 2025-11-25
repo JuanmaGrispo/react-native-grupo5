@@ -49,7 +49,7 @@ function AppContent() {
             });
           }
 
-          await AsyncStorage.setItem(PERMISSIONS_KEY, "true"); // 🔒 Guardamos que ya se pidió
+          await AsyncStorage.setItem(PERMISSIONS_KEY, "true"); //  Guardamos que ya se pidió
         }
       } catch (error) {
         console.error("Error configurando permisos:", error);
