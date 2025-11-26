@@ -28,9 +28,17 @@ export default function NovedadesScreen() {
     </View>
   );
 
+  const renderHeader = () => (
+    <View style={styles.headerContainer}>
+      <Text style={styles.mainTitle}>RitmoFit</Text>
+      <Text style={styles.subTitle}>Novedades</Text>
+    </View>
+  );
+
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
+        {renderHeader()}
         <ActivityIndicator size="large" color="#FFD800" />
       </View>
     );
@@ -38,6 +46,7 @@ export default function NovedadesScreen() {
 
   return (
     <View style={styles.container}>
+      {renderHeader()}
       {news.length === 0 ? (
         <Text style={styles.noNews}>No hay novedades por el momento.</Text>
       ) : (
@@ -62,6 +71,23 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     backgroundColor: "#000",
+  },
+  headerContainer: {
+    alignItems: "center",
+    paddingTop: 20,
+    paddingBottom: 10,
+  },
+  mainTitle: {
+    color: "#FFD800",
+    fontSize: 36,
+    fontWeight: "bold",
+    textAlign: "center",
+  },
+  subTitle: {
+    color: "#fff",
+    fontSize: 20,
+    textAlign: "center",
+    marginTop: 5,
   },
   noNews: {
     color: "#FFD800",
