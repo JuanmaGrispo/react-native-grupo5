@@ -12,6 +12,11 @@ import {
   Linking,
 } from "react-native";
 
+import Constants from "expo-constants";
+
+import api from "../../services/apiService";
+
+
 import { Picker } from "@react-native-picker/picker";
 import { Ionicons } from "@expo/vector-icons";
 
@@ -38,33 +43,35 @@ export default function HomeScreen() {
   const [reservationLoadingId, setReservationLoadingId] = useState(null);
 
   // DIRECCIÓN FIJA DE LA SEDE (puede ser dinámica si querés)
-  const sedeDireccion = "Av. Corrientes 1234, Buenos Aires";
+const [sedeDireccion, setSedeDireccion] = useState("");
+
 
   // --- Función para abrir Google Maps ---
   const openMaps = (address) => {
-    if (!address) {
-      Alert.alert("Dirección no disponible", "No se pudo abrir Google Maps.");
-      return;
-    }
+  console.log("📍 DIRECCIÓN RECIBIDA:", address);
 
-    const url =
-      Platform.OS === "ios"
-        ? `http://maps.apple.com/?q=${encodeURIComponent(address)}`
-        : `geo:0,0?q=${encodeURIComponent(address)}`;
+  if (!address) {
+    Alert.alert("Dirección no disponible", "No se pudo abrir Google Maps.");
+    return;
+  }
 
-    Linking.canOpenURL(url)
-      .then((supported) => {
-        if (supported) {
-          Linking.openURL(url);
-        } else {
-          Alert.alert(
-            "Error",
-            "No se pudo abrir Google Maps. Verifica que tengas instalada la app."
-          );
-        }
-      })
-      .catch((err) => console.error("Error abriendo Maps:", err));
-  };
+  const encodedAddress = encodeURIComponent(address);
+
+  const url = Platform.OS === "ios"
+    ? `http://maps.apple.com/?q=${encodedAddress}`
+    : `geo:0,0?q=${encodedAddress}`;
+
+  console.log("🔗 URL A ABRIR:", url);
+
+  Linking.openURL(url).catch((err) => {
+    console.log("❌ Error al abrir Maps:", err);
+    Alert.alert(
+      "Error",
+      "No se pudo abrir Google Maps. Verifica que tengas instalada la app."
+    );
+  });
+};
+
 
   // --- CARGAR CLASES + SESIONES ---
   useEffect(() => {
@@ -111,6 +118,25 @@ export default function HomeScreen() {
 
     loadData();
   }, []);
+
+
+
+useEffect(() => {
+  const loadAddress = async () => {
+    try {
+      const json = await api.get("/branches/main");
+      console.log("📍 DIRECCIÓN DESDE BACK:", json.data);
+      setSedeDireccion(json.data.location);
+    } catch (e) {
+      console.error("Error cargando dirección:", e);
+    }
+  };
+
+  loadAddress();
+}, []);
+
+
+
 
   // --- FILTROS ---
   useEffect(() => {
@@ -239,14 +265,6 @@ export default function HomeScreen() {
           </Text>
         </TouchableOpacity>
 
-        {/* BOTÓN CÓMO LLEGAR */}
-        <TouchableOpacity
-          style={[styles.mapButton, !item.branchLocation && { opacity: 0.6 }]}
-          onPress={() => openMaps(item.branchLocation || sedeDireccion)}
-          disabled={!item.branchLocation && !sedeDireccion}
-        >
-          <Text style={styles.mapButtonText}>Cómo llegar</Text>
-        </TouchableOpacity>
       </View>
     );
   };
@@ -256,9 +274,16 @@ export default function HomeScreen() {
       <Text style={styles.header}>Ritmo Fit</Text>
 
       {/* BOTÓN FIJO DE MAPA - SIEMPRE VISIBLE */}
-      <TouchableOpacity style={styles.mapButton} onPress={() => openMaps(sedeDireccion)}>
-        <Text style={styles.mapButtonText}>Cómo llegar a la sede</Text>
-      </TouchableOpacity>
+<TouchableOpacity 
+  style={[styles.mapButton, !sedeDireccion && { opacity: 0.5 }]}
+  onPress={() => openMaps(sedeDireccion)}
+  disabled={!sedeDireccion}
+>
+  <Text style={styles.mapButtonText}>
+    {sedeDireccion ? "Cómo llegar a la sede" : "Cargando dirección..."}
+  </Text>
+</TouchableOpacity>
+
 
       {renderFilter("Sede", sede, sedes, setSede)}
       {renderFilter("Disciplina", disciplina, disciplinas, setDisciplina)}
