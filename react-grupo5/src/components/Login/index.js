@@ -105,7 +105,7 @@ const styles = StyleSheet.create({
   },
   input: { 
     backgroundColor: "#1A1A1A",
-    color: "#FFD700",
+    color: "#FFF",
     borderWidth: 1,
     padding: 10,
     width: "100%",
@@ -127,7 +127,7 @@ const styles = StyleSheet.create({
   passwordInput: { 
     flex: 1, 
     paddingVertical: 10, 
-    color: "#FFD700" 
+    color: "#FFF",
   },
   button: { 
     backgroundColor: "#FFD700", 
