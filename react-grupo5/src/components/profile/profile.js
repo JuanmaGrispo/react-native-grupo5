@@ -153,8 +153,10 @@ export default function ProfileScreen() {
   return (
     <ScrollView contentContainerStyle={styles.scrollContent} style={styles.container}>
       {/* Título */}
-      <Text style={styles.title}>RitmoFit</Text>
-      <Text style={styles.subtitle}>Perfil</Text>
+      <View style={styles.header}>
+        <Text style={styles.title}>RitmoFit</Text>
+        <Text style={styles.subtitle}>Perfil</Text>
+      </View>
 
       {/* Foto de perfil */}
       <View style={styles.profilePictureContainer}>
@@ -267,19 +269,22 @@ const styles = StyleSheet.create({
     paddingBottom: 24,
   },
   center: { alignItems: 'center', justifyContent: 'center' },
+  header: {
+    paddingHorizontal: 24,
+    paddingTop: 49,
+    paddingBottom: 24,
+  },
   title: {
     color: COLORS.yellow,
     fontSize: 42,
     textAlign: 'center',
-    marginTop: 49,
-    paddingBottom: 24,
     fontWeight: '700',
   },
   subtitle: {
     color: COLORS.white,
     fontSize: 22,
     textAlign: 'center',
-    paddingBottom: 24,
+    marginTop: 8,
   },
   row: {
     flexDirection: 'row',
