@@ -320,9 +320,6 @@ export default function HistorialScreen() {
           {item.locationName && (
             <Text style={styles.cardLocation}>{item.locationName}</Text>
           )}
-          {item.durationMin > 0 && (
-            <Text style={styles.cardDuration}>{item.durationMin} min</Text>
-          )}
         </View>
         <View style={styles.cardBadge}>
           <View style={[styles.badge, styles.badgeAttended]}>
@@ -369,7 +366,7 @@ export default function HistorialScreen() {
       <View style={styles.dateFiltersSection}>
         <View style={styles.dateFilters}>
           <View style={styles.dateFilterItem}>
-            <Text style={styles.dateLabel}>Desde (dd/MM/yyyy)</Text>
+            <Text style={styles.dateLabel}>Desde</Text>
             <TextInput
               style={styles.dateInput}
               placeholder="dd/MM/yyyy"
@@ -382,7 +379,7 @@ export default function HistorialScreen() {
           </View>
 
           <View style={styles.dateFilterItem}>
-            <Text style={styles.dateLabel}>Hasta (dd/MM/yyyy)</Text>
+            <Text style={styles.dateLabel}>Hasta</Text>
             <TextInput
               style={styles.dateInput}
               placeholder="dd/MM/yyyy"

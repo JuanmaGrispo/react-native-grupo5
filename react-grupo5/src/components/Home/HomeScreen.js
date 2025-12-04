@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import {
   View,
   Text,
@@ -10,6 +10,7 @@ import {
   Platform,
   ActionSheetIOS,
   Linking,
+  Animated,
 } from "react-native";
 
 import Constants from "expo-constants";
@@ -44,6 +45,10 @@ export default function HomeScreen() {
 
   // DIRECCIÓN FIJA DE LA SEDE (puede ser dinámica si querés)
 const [sedeDireccion, setSedeDireccion] = useState("");
+
+  // Estado para colapsar/expandir filtros
+  const [isFiltersExpanded, setIsFiltersExpanded] = useState(true);
+  const filterAnimation = useRef(new Animated.Value(1)).current;
 
 
   // --- Función para abrir Google Maps ---
@@ -170,28 +175,30 @@ useEffect(() => {
 
     if (Platform.OS === "ios") {
       return (
-        <View key={label} style={styles.filterGroup}>
-          <Text style={styles.label}>{label}</Text>
+        <View key={label} style={styles.filterItem}>
+          <Text style={styles.filterLabel}>{label}</Text>
           <TouchableOpacity
             style={styles.pickerButton}
             onPress={() => showIOSPicker(label, options, value, onChange)}
           >
-            <Text style={styles.pickerButtonText}>{displayValue}</Text>
-            <Ionicons name="chevron-down" size={16} color="#fff" />
+            <Text style={styles.pickerButtonText} numberOfLines={1} ellipsizeMode="tail">{displayValue}</Text>
+            <Ionicons name="chevron-down" size={14} color="#fff" style={{ marginLeft: 6 }} />
           </TouchableOpacity>
         </View>
       );
     }
 
     return (
-      <View key={label} style={styles.filterGroup}>
-        <Text style={styles.label}>{label}</Text>
+      <View key={label} style={styles.filterItem}>
+        <Text style={styles.filterLabel}>{label}</Text>
         <View style={styles.pickerContainer}>
           <Picker
             selectedValue={value}
             onValueChange={onChange}
             dropdownIconColor="#fff"
             style={styles.picker}
+            itemStyle={styles.pickerItem}
+            mode="dropdown"
           >
             <Picker.Item label="Todas" value="" />
             {options.map((opt) => (
@@ -271,7 +278,7 @@ useEffect(() => {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.header}>Ritmo Fit</Text>
+      <Text style={styles.header}>RitmoFit</Text>
 
       {/* BOTÓN FIJO DE MAPA - SIEMPRE VISIBLE */}
 <TouchableOpacity 
@@ -284,10 +291,51 @@ useEffect(() => {
   </Text>
 </TouchableOpacity>
 
-
-      {renderFilter("Sede", sede, sedes, setSede)}
-      {renderFilter("Disciplina", disciplina, disciplinas, setDisciplina)}
-      {renderFilter("Fecha", fecha, fechas, setFecha)}
+      {/* Filtros */}
+      <Animated.View
+        style={[
+          styles.filtersSection,
+          {
+            paddingVertical: filterAnimation.interpolate({
+              inputRange: [0, 1],
+              outputRange: [6, 12],
+            }),
+          },
+        ]}
+      >
+        <TouchableOpacity
+          style={styles.collapseButton}
+          onPress={() => {
+            const toValue = isFiltersExpanded ? 0 : 1;
+            setIsFiltersExpanded(!isFiltersExpanded);
+            Animated.timing(filterAnimation, {
+              toValue,
+              duration: 300,
+              useNativeDriver: false,
+            }).start();
+          }}
+        >
+          <Ionicons
+            name={isFiltersExpanded ? "chevron-up" : "chevron-down"}
+            size={20}
+            color={COLORS.white}
+          />
+        </TouchableOpacity>
+        <Animated.View
+          style={{
+            maxHeight: filterAnimation.interpolate({
+              inputRange: [0, 1],
+              outputRange: [0, 500],
+            }),
+            opacity: filterAnimation,
+            overflow: "hidden",
+          }}
+        >
+          {renderFilter("Sede", sede, sedes, setSede)}
+          {renderFilter("Disciplina", disciplina, disciplinas, setDisciplina)}
+          {renderFilter("Fecha", fecha, fechas, setFecha)}
+        </Animated.View>
+      </Animated.View>
 
       <FlatList
         data={filteredSessions}
@@ -318,12 +366,29 @@ const styles = StyleSheet.create({
   center: { flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: COLORS.black },
   error: { color: COLORS.red, fontSize: 16, textAlign: "center" },
   header: { color: COLORS.yellow, fontSize: 42, textAlign: "center", fontWeight: "700", marginBottom: 24 },
-  label: { color: COLORS.white, fontSize: 16, fontWeight: "600", marginTop: 10, marginBottom: 4 },
-  filterGroup: { marginBottom: 12 },
-  pickerContainer: { borderWidth: 1, borderColor: COLORS.gray, borderRadius: 8, backgroundColor: COLORS.darkerGray, overflow: "hidden" },
-  picker: { color: COLORS.white, height: 44 },
-  pickerButton: { borderWidth: 1, borderColor: COLORS.gray, borderRadius: 8, backgroundColor: COLORS.darkerGray, paddingHorizontal: 14, paddingVertical: 12, flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
-  pickerButtonText: { color: COLORS.white, fontSize: 16, fontWeight: "500" },
+  filtersSection: {
+    backgroundColor: COLORS.darkerGray,
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    marginHorizontal: 24,
+    marginTop: 16,
+    marginBottom: 16,
+  },
+  filterItem: {
+    marginBottom: 12,
+  },
+  collapseButton: {
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 8,
+    marginBottom: 8,
+  },
+  filterLabel: { color: COLORS.white, fontSize: 12, marginBottom: 4, opacity: 0.8 },
+  pickerContainer: { borderWidth: 1, borderColor: COLORS.gray, borderRadius: 8, backgroundColor: COLORS.gray, overflow: "hidden", minHeight: 50, justifyContent: "center" },
+  picker: { color: COLORS.white, height: 50, width: "100%" },
+  pickerItem: { color: COLORS.white, fontSize: 14 },
+  pickerButton: { borderWidth: 1, borderColor: COLORS.gray, borderRadius: 8, backgroundColor: COLORS.gray, paddingHorizontal: 12, paddingVertical: 14, flexDirection: "row", alignItems: "center", justifyContent: "space-between", minHeight: 50 },
+  pickerButtonText: { color: COLORS.white, fontSize: 14, fontWeight: "500", flex: 1 },
   card: { backgroundColor: COLORS.darkerGray, borderRadius: 12, padding: 16, marginBottom: 16, borderWidth: 1, borderColor: "#333" },
   reserveButton: { marginTop: 12, backgroundColor: COLORS.yellow, borderRadius: 8, paddingVertical: 10, alignItems: "center" },
   reserveButtonDisabled: { opacity: 0.6 },

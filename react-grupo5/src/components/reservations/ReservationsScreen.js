@@ -454,7 +454,7 @@ export default function ReservationsScreen() {
     <View style={styles.container}>
       <View style={styles.header}>
         <Text style={styles.title}>RitmoFit</Text>
-        <Text style={styles.subtitle}>Mis Reservas</Text>
+        <Text style={styles.subtitle}>Reservas</Text>
       </View>
 
       {error && reservations.length > 0 && (
