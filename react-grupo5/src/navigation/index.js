@@ -11,6 +11,8 @@ import WelcomeScreen from "../components/Welcome";
 import ProfileScreen from "../components/profile/profile";
 import ReservationsScreen from "../components/reservations/ReservationsScreen";
 import HistorialScreen from "../components/Historial/HistorialScreen";
+import QRScannerScreen from "../components/QRScanner/QRScannerScreen";
+import CheckInConfirmScreen from "../components/QRScanner/CheckInConfirmScreen";
 import { AuthContext } from "../context/AuthContext";
 import { View, ActivityIndicator } from "react-native";
 import NovedadesScreen from "../components/Novedades/novedades";
@@ -111,6 +113,8 @@ export default function RootStack() {
         <>
           <Stack.Screen name="MainTabs" component={MainTabs} />
           <Stack.Screen name="Detail" component={DetailScreen} />
+          <Stack.Screen name="QRScanner" component={QRScannerScreen} />
+          <Stack.Screen name="CheckInConfirm" component={CheckInConfirmScreen} />
         </>
       ) : (
         <>

@@ -503,6 +503,15 @@ export default function ReservationsScreen() {
           />
         }
       />
+
+      {/* Botón flotante para escanear QR */}
+      <TouchableOpacity
+        style={styles.fab}
+        onPress={() => navigation.navigate("QRScanner")}
+        activeOpacity={0.8}
+      >
+        <Ionicons name="qr-code-outline" size={28} color={COLORS.black} />
+      </TouchableOpacity>
     </View>
   );
 }
@@ -780,5 +789,21 @@ const styles = StyleSheet.create({
     color: COLORS.white,
     marginTop: 8,
     fontSize: 14,
+  },
+  fab: {
+    position: "absolute",
+    right: 24,
+    bottom: 24,
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: COLORS.yellow,
+    alignItems: "center",
+    justifyContent: "center",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 8,
   },
 });
