@@ -25,8 +25,20 @@ module.exports = {
         backgroundColor: "#ffffff"
       },
       edgeToEdgeEnabled: true,
-      package: "com.anonymous.reactgrupo5"
+      package: "com.anonymous.reactgrupo5",
+      permissions: [
+        "RECEIVE_BOOT_COMPLETED"
+      ]
     },
+    plugins: [
+      [
+        "expo-notifications",
+        {
+          icon: "./assets/icon.png",
+          color: "#FFD800",
+        }
+      ]
+    ],
     web: {
       favicon: "./assets/favicon.png"
     },

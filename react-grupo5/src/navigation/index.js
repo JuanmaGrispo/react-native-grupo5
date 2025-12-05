@@ -16,6 +16,7 @@ import CheckInConfirmScreen from "../components/QRScanner/CheckInConfirmScreen";
 import { AuthContext } from "../context/AuthContext";
 import { View, ActivityIndicator } from "react-native";
 import NovedadesScreen from "../components/Novedades/novedades";
+import NotificationScreen from "../components/Notifications/NotificationScreen";
 
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -115,6 +116,7 @@ export default function RootStack() {
           <Stack.Screen name="Detail" component={DetailScreen} />
           <Stack.Screen name="QRScanner" component={QRScannerScreen} />
           <Stack.Screen name="CheckInConfirm" component={CheckInConfirmScreen} />
+          <Stack.Screen name="Notifications" component={NotificationScreen} />
         </>
       ) : (
         <>
