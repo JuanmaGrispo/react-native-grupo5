@@ -9,9 +9,13 @@ import {
   RefreshControl,
   TextInput,
   Alert,
+  Modal,
+  ScrollView,
 } from "react-native";
 import { useFocusEffect } from "@react-navigation/native";
+import { Ionicons } from "@expo/vector-icons";
 import { getMyAttendance } from "../../services/attendanceService";
+import { createRating, getMyRatings, getSessionRatings } from "../../services/ratingService";
 
 const COLORS = {
   black: "#000000",
@@ -36,12 +40,28 @@ export default function HistorialScreen() {
   const [startDateText, setStartDateText] = useState("");
   const [endDateText, setEndDateText] = useState("");
 
+  // Estados para ratings
+  const [ratings, setRatings] = useState({}); // Mapa: sessionId -> rating
+  const [showRatingModal, setShowRatingModal] = useState(false);
+  const [showViewRatingModal, setShowViewRatingModal] = useState(false);
+  const [selectedSession, setSelectedSession] = useState(null);
+  const [selectedRating, setSelectedRating] = useState(null);
+  const [ratingValue, setRatingValue] = useState(5);
+  const [ratingComment, setRatingComment] = useState("");
+  const [submittingRating, setSubmittingRating] = useState(false);
+
   async function loadHistory() {
     try {
       setError("");
       setLoading(true);
-      const data = await getMyAttendance();
-      const attendanceList = Array.isArray(data) ? data : [];
+      
+      // Cargar historial y ratings en paralelo
+      const [attendanceData, ratingsData] = await Promise.all([
+        getMyAttendance(),
+        getMyRatings().catch(() => []) // Si falla, usar array vacío
+      ]);
+      
+      const attendanceList = Array.isArray(attendanceData) ? attendanceData : [];
       
       // Ordenar por fecha más reciente primero
       attendanceList.sort((a, b) => {
@@ -50,6 +70,17 @@ export default function HistorialScreen() {
         return dateB - dateA;
       });
       
+      // Crear mapa de ratings por sessionId
+      const ratingsMap = {};
+      if (Array.isArray(ratingsData)) {
+        ratingsData.forEach((rating) => {
+          if (rating.session?.id) {
+            ratingsMap[rating.session.id] = rating;
+          }
+        });
+      }
+      
+      setRatings(ratingsMap);
       setAttendanceData(attendanceList);
       setFilteredData(attendanceList);
     } catch (e) {
@@ -226,6 +257,18 @@ export default function HistorialScreen() {
     return "";
   };
 
+  // Verificar si una sesión puede ser calificada (dentro de 24 horas)
+  const canRateSession = (session) => {
+    if (!session?.startAt || !session?.durationMin) return false;
+    
+    const startAt = new Date(session.startAt);
+    const endAt = new Date(startAt.getTime() + session.durationMin * 60 * 1000);
+    const deadline = new Date(endAt.getTime() + 24 * 60 * 60 * 1000); // +24 horas
+    const now = new Date();
+    
+    return now <= deadline;
+  };
+
   // Transformar datos a formato UI
   const transformToHistoryItems = (data) => {
     return data
@@ -247,6 +290,8 @@ export default function HistorialScreen() {
 
         return {
           id: dto.id || session.id,
+          sessionId: session.id,
+          session: session, // Guardar la sesión completa para usar en rating
           title,
           subtitle,
           teacher,
@@ -311,7 +356,65 @@ export default function HistorialScreen() {
     (startDate !== null || endDate !== null) && 
     (!startDate || !endDate || startDate <= endDate);
 
+  const handleRateSession = (session) => {
+    setSelectedSession(session);
+    setRatingValue(5);
+    setRatingComment("");
+    setShowRatingModal(true);
+  };
+
+  const handleViewRating = async (sessionId) => {
+    try {
+      const sessionRatings = await getSessionRatings(sessionId);
+      // Buscar la calificación del usuario actual
+      const userRating = sessionRatings.find((r) => ratings[sessionId]?.id === r.id) || ratings[sessionId];
+      if (userRating) {
+        setSelectedRating(userRating);
+        setShowViewRatingModal(true);
+      }
+    } catch (error) {
+      Alert.alert("Error", "No se pudo cargar la calificación.");
+    }
+  };
+
+  const handleSubmitRating = async () => {
+    if (!selectedSession || !ratingValue) {
+      Alert.alert("Error", "Seleccioná una calificación.");
+      return;
+    }
+
+    try {
+      setSubmittingRating(true);
+      const newRating = await createRating(
+        selectedSession.id,
+        ratingValue,
+        ratingComment.trim() || undefined
+      );
+      
+      // Actualizar el mapa de ratings
+      setRatings((prev) => ({
+        ...prev,
+        [selectedSession.id]: newRating,
+      }));
+      
+      setShowRatingModal(false);
+      setSelectedSession(null);
+      setRatingValue(5);
+      setRatingComment("");
+      Alert.alert("Éxito", "Calificación enviada correctamente.");
+    } catch (error) {
+      const errorMessage = error.response?.data?.message || error.message || "No se pudo enviar la calificación.";
+      Alert.alert("Error", errorMessage);
+    } finally {
+      setSubmittingRating(false);
+    }
+  };
+
   const renderItem = ({ item }) => {
+    const sessionRating = item.sessionId ? ratings[item.sessionId] : null;
+    const canRate = canRateSession(item.session);
+    const hasRating = !!sessionRating;
+
     return (
       <View style={styles.card}>
         <View style={styles.cardContent}>
@@ -322,6 +425,21 @@ export default function HistorialScreen() {
           )}
         </View>
         <View style={styles.cardBadge}>
+          {hasRating ? (
+            <TouchableOpacity
+              style={styles.viewRatingButton}
+              onPress={() => handleViewRating(item.sessionId)}
+            >
+              <Text style={styles.viewRatingButtonText}>Ver calificación</Text>
+            </TouchableOpacity>
+          ) : canRate ? (
+            <TouchableOpacity
+              style={styles.rateButton}
+              onPress={() => handleRateSession(item.session)}
+            >
+              <Text style={styles.rateButtonText}>Calificar</Text>
+            </TouchableOpacity>
+          ) : null}
           <View style={[styles.badge, styles.badgeAttended]}>
             <Text style={styles.badgeText}>Asistida</Text>
           </View>
@@ -480,6 +598,134 @@ export default function HistorialScreen() {
           />
         }
       />
+
+      {/* Modal para calificar */}
+      <Modal
+        visible={showRatingModal}
+        transparent={true}
+        animationType="slide"
+        onRequestClose={() => setShowRatingModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Calificar Clase</Text>
+            <Text style={styles.modalSubtitle}>{selectedSession?.classRef?.title || "Clase"}</Text>
+
+            <Text style={styles.modalLabel}>Calificación (1-5 estrellas)</Text>
+            <View style={styles.starsContainer}>
+              {[1, 2, 3, 4, 5].map((star) => (
+                <TouchableOpacity
+                  key={star}
+                  onPress={() => setRatingValue(star)}
+                  style={styles.starButton}
+                >
+                  <Ionicons
+                    name={star <= ratingValue ? "star" : "star-outline"}
+                    size={40}
+                    color={COLORS.yellow}
+                  />
+                </TouchableOpacity>
+              ))}
+            </View>
+
+            <Text style={styles.modalLabel}>Comentario (opcional)</Text>
+            <TextInput
+              style={styles.commentInput}
+              placeholder="Escribí tu comentario aquí..."
+              placeholderTextColor={COLORS.white + "80"}
+              value={ratingComment}
+              onChangeText={setRatingComment}
+              multiline
+              numberOfLines={4}
+              maxLength={1000}
+              textAlignVertical="top"
+            />
+            <Text style={styles.charCount}>
+              {ratingComment.length}/1000 caracteres
+            </Text>
+
+            <View style={styles.modalButtons}>
+              <TouchableOpacity
+                style={[styles.modalButton, styles.cancelButton]}
+                onPress={() => {
+                  setShowRatingModal(false);
+                  setSelectedSession(null);
+                  setRatingValue(5);
+                  setRatingComment("");
+                }}
+                disabled={submittingRating}
+              >
+                <Text style={styles.cancelButtonText}>Cancelar</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.modalButton, styles.submitButton, submittingRating && styles.disabledButton]}
+                onPress={handleSubmitRating}
+                disabled={submittingRating}
+              >
+                {submittingRating ? (
+                  <ActivityIndicator color={COLORS.black} />
+                ) : (
+                  <Text style={styles.submitButtonText}>Enviar</Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Modal para ver calificación */}
+      <Modal
+        visible={showViewRatingModal}
+        transparent={true}
+        animationType="slide"
+        onRequestClose={() => setShowViewRatingModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Mi Calificación</Text>
+            {selectedRating && (
+              <>
+                <View style={styles.ratingDisplayContainer}>
+                  <View style={styles.starsContainer}>
+                    {[1, 2, 3, 4, 5].map((star) => (
+                      <Ionicons
+                        key={star}
+                        name={star <= selectedRating.rating ? "star" : "star-outline"}
+                        size={40}
+                        color={COLORS.yellow}
+                      />
+                    ))}
+                  </View>
+                  {selectedRating.comment && (
+                    <View style={styles.commentDisplayContainer}>
+                      <Text style={styles.commentLabel}>Comentario:</Text>
+                      <Text style={styles.commentText}>{selectedRating.comment}</Text>
+                    </View>
+                  )}
+                  <Text style={styles.ratingDate}>
+                    Calificada el {new Date(selectedRating.createdAt).toLocaleDateString("es-AR", {
+                      day: "2-digit",
+                      month: "2-digit",
+                      year: "numeric",
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    })}
+                  </Text>
+                </View>
+              </>
+            )}
+            <TouchableOpacity
+              style={styles.closeButton}
+              onPress={() => {
+                setShowViewRatingModal(false);
+                setSelectedRating(null);
+              }}
+            >
+              <Text style={styles.closeButtonText}>Cerrar</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -645,8 +891,9 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   cardBadge: {
-    display: "flex",
+    flexDirection: "row",
     alignItems: "center",
+    gap: 8,
   },
   badge: {
     paddingHorizontal: 10,
@@ -714,5 +961,167 @@ const styles = StyleSheet.create({
     color: COLORS.white,
     marginTop: 8,
     fontSize: 14,
+  },
+  rateButton: {
+    backgroundColor: COLORS.yellow,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 8,
+    marginRight: 8,
+  },
+  rateButtonText: {
+    color: COLORS.black,
+    fontSize: 14,
+    fontWeight: "600",
+  },
+  viewRatingButton: {
+    backgroundColor: COLORS.gray,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 8,
+    marginRight: 8,
+  },
+  viewRatingButtonText: {
+    color: COLORS.white,
+    fontSize: 14,
+    fontWeight: "600",
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0, 0, 0, 0.7)",
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 20,
+  },
+  modalContent: {
+    backgroundColor: COLORS.darkerGray,
+    borderRadius: 16,
+    padding: 24,
+    width: "100%",
+    maxWidth: 400,
+    borderWidth: 1,
+    borderColor: COLORS.gray,
+  },
+  modalTitle: {
+    color: COLORS.yellow,
+    fontSize: 24,
+    fontWeight: "700",
+    textAlign: "center",
+    marginBottom: 8,
+  },
+  modalSubtitle: {
+    color: COLORS.white,
+    fontSize: 16,
+    textAlign: "center",
+    marginBottom: 24,
+    opacity: 0.9,
+  },
+  modalLabel: {
+    color: COLORS.white,
+    fontSize: 16,
+    fontWeight: "600",
+    marginBottom: 12,
+    marginTop: 16,
+  },
+  starsContainer: {
+    flexDirection: "row",
+    justifyContent: "center",
+    alignItems: "center",
+    gap: 8,
+    marginVertical: 16,
+  },
+  starButton: {
+    padding: 4,
+  },
+  commentInput: {
+    backgroundColor: COLORS.gray,
+    borderRadius: 8,
+    padding: 12,
+    color: COLORS.white,
+    fontSize: 14,
+    borderWidth: 1,
+    borderColor: "#444",
+    minHeight: 100,
+    marginBottom: 8,
+  },
+  charCount: {
+    color: COLORS.white,
+    fontSize: 12,
+    opacity: 0.6,
+    textAlign: "right",
+    marginBottom: 16,
+  },
+  modalButtons: {
+    flexDirection: "row",
+    gap: 12,
+    marginTop: 8,
+  },
+  modalButton: {
+    flex: 1,
+    paddingVertical: 14,
+    borderRadius: 8,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  cancelButton: {
+    backgroundColor: COLORS.gray,
+  },
+  cancelButtonText: {
+    color: COLORS.white,
+    fontSize: 16,
+    fontWeight: "600",
+  },
+  submitButton: {
+    backgroundColor: COLORS.yellow,
+  },
+  submitButtonText: {
+    color: COLORS.black,
+    fontSize: 16,
+    fontWeight: "600",
+  },
+  disabledButton: {
+    opacity: 0.6,
+  },
+  closeButton: {
+    backgroundColor: COLORS.yellow,
+    marginTop: 16,
+    width: "100%",
+    paddingVertical: 14,
+    borderRadius: 8,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  closeButtonText: {
+    color: COLORS.black,
+    fontSize: 16,
+    fontWeight: "600",
+  },
+  ratingDisplayContainer: {
+    alignItems: "center",
+    marginVertical: 16,
+  },
+  commentDisplayContainer: {
+    width: "100%",
+    marginTop: 20,
+    padding: 16,
+    backgroundColor: COLORS.gray,
+    borderRadius: 8,
+  },
+  commentLabel: {
+    color: COLORS.white,
+    fontSize: 14,
+    fontWeight: "600",
+    marginBottom: 8,
+  },
+  commentText: {
+    color: COLORS.white,
+    fontSize: 14,
+    lineHeight: 20,
+  },
+  ratingDate: {
+    color: COLORS.white,
+    fontSize: 12,
+    opacity: 0.7,
+    marginTop: 16,
   },
 });
