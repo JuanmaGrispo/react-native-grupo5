@@ -1,4 +1,4 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useRef } from "react";
 import { Alert, Platform } from "react-native";
 import * as Notifications from "expo-notifications";
 import { Camera } from "expo-camera";
@@ -19,6 +19,9 @@ Notifications.setNotificationHandler({
 
 function AppContent() {
   const { isAuthenticated } = useAuth(); // ✅ usamos isAuthenticated en lugar de user
+  const navigationRef = useRef(null);
+  const notificationListener = useRef(null);
+  const responseListener = useRef(null);
 
   useEffect(() => {
     const setupPermissionsAndNotifications = async () => {
@@ -59,8 +62,43 @@ function AppContent() {
     setupPermissionsAndNotifications();
   }, [isAuthenticated]); // 👈 se ejecuta cuando el usuario inicia o cierra sesión
 
+  // Configurar listeners de notificaciones
+  useEffect(() => {
+    if (!isAuthenticated) return;
+
+    // Cuando se recibe una notificación en foreground
+    notificationListener.current =
+      Notifications.addNotificationReceivedListener((notification) => {
+        console.log("Notification received:", notification);
+      });
+
+    // Cuando el usuario toca una notificación
+    responseListener.current =
+      Notifications.addNotificationResponseReceivedListener((response) => {
+        const data = response.notification.request.content.data;
+
+        // Navegar a la pantalla de notificaciones
+        if (navigationRef.current) {
+          navigationRef.current.navigate("MainTabs", {
+            screen: "Notifications",
+          });
+        }
+      });
+
+    return () => {
+      if (notificationListener.current) {
+        Notifications.removeNotificationSubscription(
+          notificationListener.current
+        );
+      }
+      if (responseListener.current) {
+        Notifications.removeNotificationSubscription(responseListener.current);
+      }
+    };
+  }, [isAuthenticated]);
+
   return (
-    <NavigationContainer>
+    <NavigationContainer ref={navigationRef}>
       <RootStack />
     </NavigationContainer>
   );

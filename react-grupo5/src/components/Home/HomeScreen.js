@@ -12,6 +12,8 @@ import {
   Linking,
   Animated,
 } from "react-native";
+import { useNavigation } from "@react-navigation/native";
+import { useNotifications } from "../../hooks/useNotifications";
 
 import Constants from "expo-constants";
 
@@ -25,6 +27,8 @@ import { getAllClasses, getAllSessions } from "../../services/apiService";
 import { createReservation } from "../../services/reservationService";
 
 export default function HomeScreen() {
+  const navigation = useNavigation();
+  const { unreadCount } = useNotifications();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
@@ -76,6 +80,7 @@ const [sedeDireccion, setSedeDireccion] = useState("");
     );
   });
 };
+
 
 
   // --- CARGAR CLASES + SESIONES ---
@@ -291,6 +296,26 @@ useEffect(() => {
   </Text>
 </TouchableOpacity>
 
+      {/* BOTÓN DE ACCESO A NOTIFICACIONES */}
+      <TouchableOpacity 
+        style={styles.notificationsButton}
+        onPress={() => navigation.navigate("Notifications")}
+      >
+        <View style={styles.notificationsButtonContent}>
+          <Ionicons name="notifications" size={20} color={COLORS.black} style={{ marginRight: 8 }} />
+          <Text style={styles.notificationsButtonText}>
+            Notificaciones
+          </Text>
+          {unreadCount > 0 && (
+            <View style={styles.notificationsBadge}>
+              <Text style={styles.notificationsBadgeText}>
+                {unreadCount > 99 ? "99+" : unreadCount}
+              </Text>
+            </View>
+          )}
+        </View>
+      </TouchableOpacity>
+
       {/* Filtros */}
       <Animated.View
         style={[
@@ -406,6 +431,41 @@ mapButtonText: {
   color: "#000000", // negro
   fontSize: 16, 
   fontWeight: "600" 
+},
+notificationsButton: {
+  marginTop: 12,
+  backgroundColor: COLORS.yellow,
+  borderRadius: 8,
+  paddingVertical: 12,
+  paddingHorizontal: 16,
+},
+notificationsButtonContent: {
+  flexDirection: "row",
+  alignItems: "center",
+  justifyContent: "center",
+  position: "relative",
+},
+notificationsButtonText: {
+  color: COLORS.black,
+  fontSize: 16,
+  fontWeight: "600",
+},
+notificationsBadge: {
+  position: "absolute",
+  right: -8,
+  top: -8,
+  backgroundColor: COLORS.red,
+  borderRadius: 10,
+  minWidth: 20,
+  height: 20,
+  justifyContent: "center",
+  alignItems: "center",
+  paddingHorizontal: 4,
+},
+notificationsBadgeText: {
+  color: COLORS.white,
+  fontSize: 10,
+  fontWeight: "bold",
 },
 
 });
